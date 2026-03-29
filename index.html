@@ -1268,31 +1268,30 @@ async function loadLiveData(){
     // ── 1. data_status sheet ──────────────────────────────────────────────────
     const statusTable=await fetchGSheet('data_status');
     if(statusTable&&statusTable.rows&&statusTable.rows.length>0){
-      const hdrs=statusTable.cols.map(c=>(c.label||'').trim());
-      const ci=kw=>hdrs.findIndex(h=>h.includes(kw));
-      const iId=ci('รหัส'), iF=ci('การเงิน'), iA=ci('กิจกรรม'), iNote=ci('หมายเหตุ'), iEnd=ci('สิ้นสุด');
-      if(iId>=0){
-        const liveMap={};
-        statusTable.rows.forEach(row=>{
-          const c=row.c;
-          const id=(c[iId]&&c[iId].v)?c[iId].v.toString().trim():'';
-          if(!id) return;
-          liveMap[id]={
-            fDate:iF>=0?gvizDate(c[iF]):null,
-            aDate:iA>=0?gvizDate(c[iA]):null,
-            note:iNote>=0&&c[iNote]&&c[iNote].v?c[iNote].v.toString():'',
-            ended:iEnd>=0&&c[iEnd]&&c[iEnd].v?Boolean(c[iEnd].v):undefined
-          };
-        });
-        projectUpdates.forEach(p=>{
-          const live=liveMap[p.id];
-          if(!live) return;
-          if(live.fDate){p.fTs=live.fDate; p.finance=thaiDateShort(live.fDate);}
-          if(live.aDate){p.aTs=live.aDate; p.activity=thaiDateShort(live.aDate);}
-          if(live.note) p.endNote=live.note;
-          if(live.ended!==undefined) p.ended=live.ended;
-        });
-      }
+      // data_status มี header หลายแถว — scan ทุก row หา proj_ID (A6801–B6801)
+      const projRe=/^[AB]\d{4}$/;
+      const liveMap={};
+      statusTable.rows.forEach(row=>{
+        const c=row.c;
+        if(!c||!c[0]||!c[0].v) return;
+        const id=c[0].v.toString().trim();
+        if(!projRe.test(id)) return; // ข้าม header/note rows
+        // col: 0=id, 1=ชื่อ, 2=วันการเงิน, 3=วันกิจกรรม, 4=หมายเหตุ, 5=สิ้นสุด
+        liveMap[id]={
+          fDate:c[2]?gvizDate(c[2]):null,
+          aDate:c[3]?gvizDate(c[3]):null,
+          note:c[4]&&c[4].v?c[4].v.toString():'',
+          ended:c[5]&&c[5].v?String(c[5].v).trim().toLowerCase()==='true':false
+        };
+      });
+      projectUpdates.forEach(p=>{
+        const live=liveMap[p.id];
+        if(!live) return;
+        if(live.fDate){p.fTs=live.fDate; p.finance=thaiDateShort(live.fDate);}
+        if(live.aDate){p.aTs=live.aDate; p.activity=thaiDateShort(live.aDate);}
+        if(live.note) p.endNote=live.note;
+        p.ended=live.ended;
+      });
     }
     // ── 2. finance_plan2 sheet ────────────────────────────────────────────────
     // Layout: TRANSPOSED — row0=proj_IDs, col0=quarter labels (Plan68-Q2, Actual68-Q2 ...)
