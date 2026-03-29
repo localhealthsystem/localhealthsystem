@@ -1304,23 +1304,40 @@ async function loadLiveData(){
         const projIds=planTable.rows[0].c.map(cell=>gvizVal(cell)?gvizVal(cell).toString().trim():'');
 
         // Build map: rowLabel → colIndex → value
-        // rowLabel examples: "Plan68-Q2", "Actual68-Q2", "Plan69-Q1" ...
+        // rowLabel examples: "Plan68-Q2", "Actual68-Q2" (เดิม)
+        //                    "แผน มค-มีค 68", "ผล ตค-ธค 67" (ใหม่)
         const rowMap={}; // rowLabel → array of values by col
         planTable.rows.forEach((row,ri)=>{
-          if(ri===0||ri===1) return; // skip proj_ID and ชื่อโครงการ rows
+          if(ri===0||ri===1) return; // skip header rows
           const label=gvizVal(row.c[0]);
           if(!label) return;
           rowMap[label.toString().trim()]=row.c.map(cell=>gvizVal(cell));
         });
 
-        // Parse quarter label: "Plan68-Q2" → {type:'plan', year:68, q:2}
-        //                      "Actual68-Q3" → {type:'actual', year:68, q:3}
+        // Thai month → quarter mapping
+        const thaiMonthMap={
+          'ตค-ธค':4,'ตค–ธค':4,'ต.ค.-ธ.ค.':4,
+          'มค-มีค':1,'มค–มีค':1,'ม.ค.-มี.ค.':1,'มค-มีีค':1,
+          'เมย-มิย':2,'เมย–มิย':2,'เม.ย.-มิ.ย.':2,
+          'กค-กย':3,'กค–กย':3,'ก.ค.-ก.ย.':3
+        };
+
+        // Parse quarter label — รองรับทั้ง English และ Thai format
         function parseQLabel(lbl){
-          const s=lbl.toLowerCase().replace(/\s/g,'');
-          const type=s.startsWith('actual')?'actual':'plan';
-          const m=s.match(/(\d{2})-?q(\d)/);
-          if(!m) return null;
-          return {type,year:parseInt(m[1]),q:parseInt(m[2])};
+          const s=lbl.toString().trim();
+          // English: Plan68-Q2 / Actual68-Q3
+          const eng=s.toLowerCase().replace(/\s/g,'');
+          const type=eng.startsWith('actual')||s.startsWith('ผล')?'actual':'plan';
+          const mEng=eng.match(/(\d{2})-?q(\d)/);
+          if(mEng) return {type,year:parseInt(mEng[1]),q:parseInt(mEng[2])};
+          // Thai: "ผล ตค-ธค 67" / "แผน มค-มีค 68"
+          const mThai=s.match(/^(ผล|แผน)\s+(.+?)\s+(\d{2})$/);
+          if(mThai){
+            const monthKey=Object.keys(thaiMonthMap).find(k=>mThai[2].includes(k.replace('–','-')));
+            const q=monthKey?thaiMonthMap[monthKey]:null;
+            if(q) return {type:mThai[1]==='ผล'?'actual':'plan',year:parseInt(mThai[3]),q};
+          }
+          return null;
         }
 
         // Group plan/actual pairs by (year,q)
