@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard ศสท. — ระบบสุขภาพท้องถิ่น</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --primary:#0f4c6e;--primary2:#1a6d96;--accent:#00b4b4;--accent2:#57c5b6;
+  --bg:#f0f5f9;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;
+  --bpt:#6d28d9;--sss:#0891b2;--swrs:#c2410c;--gov:#059669;
+  --sidebar:220px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:linear-gradient(180deg,#0a3347 0%,#0f4c6e 40%,#1a6d96 100%);position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:200;box-shadow:4px 0 20px rgba(0,0,0,.2)}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo h2{font-size:15px;font-weight:800;color:#fff;line-height:1.3}
+.sb-logo p{font-size:11px;color:rgba(255,255,255,.6);margin-top:3px}
+.sb-logo .badge{display:inline-block;background:var(--accent);color:#0a3347;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-top:5px}
+.sb-nav{flex:1;padding:10px 0;overflow-y:auto}
+.sb-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1px;padding:12px 18px 5px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 18px;color:rgba(255,255,255,.7);cursor:pointer;font-size:13px;font-weight:500;transition:all .18s;border-left:3px solid transparent}
+.sb-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-item.active{background:rgba(255,255,255,.12);color:var(--accent);border-left-color:var(--accent);font-weight:700}
+.sb-item .icon{font-size:15px;width:20px;text-align:center}
+.sb-item .count{margin-left:auto;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:10px;font-size:11px}
+.sb-footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.4)}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.tb-title{font-size:17px;font-weight:700;color:var(--primary)}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-date{font-size:12px;color:var(--muted);background:#f1f5f9;padding:5px 12px;border-radius:20px}
+.tb-search{display:flex;align-items:center;gap:7px;background:#f1f5f9;border-radius:20px;padding:5px 14px;border:1px solid var(--border)}
+.tb-search input{border:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:13px;color:var(--text);outline:none;width:180px}
+
+.content{padding:24px 28px;flex:1}
+.sec{display:none}.sec.active{display:block}
+
+/* KPI GRID */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.kcard{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--border);display:flex;align-items:center;gap:13px;transition:transform .2s,box-shadow .2s;cursor:default}
+.kcard:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.09)}
+.kicon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.kval{font-size:22px;font-weight:800;line-height:1.1}
+.klabel{font-size:11px;color:var(--muted);margin-top:2px;font-weight:500}
+.ksub{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+/* CARDS */
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid var(--border);margin-bottom:18px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)}
+.ct{font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.g31{display:grid;grid-template-columns:1.8fr 1fr;gap:18px;margin-bottom:18px}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.b-bpt{background:#ede9fe;color:#5b21b6}
+.b-sss{background:#e0f2fe;color:#0369a1}
+.b-swrs{background:#ffedd5;color:#c2410c}
+.b-gov{background:#dcfce7;color:#166534}
+.b-on{background:#d1fae5;color:#065f46}
+.b-warn{background:#fef3c7;color:#92400e}
+.b-blue{background:#dbeafe;color:#1e40af}
+.pid{display:inline-block;color:#fff;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700}
+
+/* PROJECT ROWS */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:9px 12px;text-align:left;font-weight:600;white-space:nowrap}
+.tbl th:first-child{border-radius:7px 0 0 0}.tbl th:last-child{border-radius:0 7px 0 0}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl tr:hover td{background:#f8fafc}
+.tbl tr:last-child td{border-bottom:none}
+.pname{font-weight:600;font-size:12.5px;line-height:1.5}
+.psub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* PROGRESS */
+.pwrap{width:100%;background:#e2e8f0;border-radius:4px;height:6px;margin-top:3px}
+.pbar{height:6px;border-radius:4px}
+
+/* FINANCE COMPARE */
+.fc-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px}
+.fc-row:last-child{border-bottom:none}
+.fc-label{width:80px;font-weight:700;flex-shrink:0;color:var(--primary)}
+.fc-bar-wrap{flex:1;display:flex;flex-direction:column;gap:3px}
+.fc-bar-row{display:flex;align-items:center;gap:7px}
+.fc-bar-bg{flex:1;background:#e2e8f0;border-radius:4px;height:9px}
+.fc-bar-fill{height:9px;border-radius:4px}
+.fc-num{font-size:11px;color:var(--muted);width:75px;text-align:right;flex-shrink:0}
+.fc-pct{font-size:10px;font-weight:700;width:38px;text-align:right;flex-shrink:0}
+
+/* PARTNER CARD */
+.ptag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;margin:2px}
+.pv-n{background:#dbeafe;color:#1e40af}
+.pv-c{background:#d1fae5;color:#065f46}
+.pv-ne{background:#fef3c7;color:#92400e}
+.pv-s{background:#fce7f3;color:#9d174d}
+
+/* STAFF GRID */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.scard{background:#fff;border:1px solid var(--border);border-radius:11px;padding:14px;display:flex;gap:10px;transition:box-shadow .2s}
+.scard:hover{box-shadow:0 4px 14px rgba(0,0,0,.09)}
+.savatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.sname{font-weight:700;font-size:13px}
+.stitle{font-size:11px;color:var(--muted);margin-top:1px}
+.srole{font-size:11px;color:var(--accent);margin-top:2px;font-weight:600}
+.skill-tag{display:inline-block;background:#f0f9ff;color:#0369a1;font-size:10px;padding:1px 6px;border-radius:8px;margin:2px 1px 0}
+
+/* TIMELINE */
+.tline{position:relative;padding-left:24px}
+.tline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--primary),var(--accent));border-radius:2px}
+.titem{position:relative;margin-bottom:16px}
+.tdot{position:absolute;left:-20px;top:3px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px var(--primary)}
+.tdate{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.tcnt{font-size:13px;font-weight:600}
+.tdet{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+/* GANTT */
+.gantt-months{display:flex;padding-left:84px;margin-bottom:4px;font-size:10.5px;color:var(--muted);font-weight:600}
+.gm{flex:1;text-align:center;min-width:0}
+.grow{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.glabel{width:72px;font-size:11.5px;font-weight:700;color:var(--primary);flex-shrink:0}
+.gtrack{flex:1;background:#e2e8f0;border-radius:4px;height:20px;position:relative}
+.gbar{position:absolute;height:20px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden}
+
+/* ORG CHART */
+.org-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.org-card{background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:11px 14px}
+.org-name{font-size:12.5px;font-weight:700;color:var(--primary);margin-bottom:2px}
+.org-count{font-size:22px;font-weight:800;color:var(--accent)}
+.org-label{font-size:11px;color:var(--muted)}
+
+/* SEARCH */
+.search-box{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:7px 14px;margin-bottom:14px}
+.search-box input{border:none;background:transparent;font-family:'Sarabun',sans-serif;font-size:13px;color:var(--text);outline:none;flex:1}
+.partner-table .tbl td{padding:8px 12px}
+
+/* MAP */
+#gis-map{border-radius:0 0 14px 14px}
+.map-filter-bar{display:flex;flex-wrap:wrap;gap:7px;padding:12px 18px;background:#f8fafc;border-bottom:1px solid var(--border)}
+.mf-btn{border:2px solid transparent;background:#fff;padding:4px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
+.mf-btn.active{border-color:currentColor;background:rgba(0,0,0,.05)}
+.mf-btn:hover{opacity:.8}
+.leaflet-tooltip{font-family:'Sarabun',sans-serif!important;font-size:12.5px!important;border-radius:8px!important;padding:6px 10px!important;border:none!important;box-shadow:0 3px 12px rgba(0,0,0,.15)!important}
+
+/* SUMMARY BOX */
+.sbox{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:12px;padding:13px 17px;margin-bottom:18px}
+.sbox h3{font-size:13px;color:#0369a1;font-weight:700;margin-bottom:5px}
+.sbox p{font-size:12.5px;color:#0c4a6e;line-height:1.7}
+
+.footer{text-align:center;padding:16px;color:var(--muted);font-size:11px;border-top:1px solid var(--border)}
+.warn-box{background:#fef3c7;border:1px solid #fde68a;border-radius:9px;padding:10px 14px;font-size:12.5px;color:#92400e;margin-top:8px}
+
+/* DATA FRESHNESS */
+.stale-alert{background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:13px 17px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px}
+.stale-alert-icon{font-size:24px;line-height:1;flex-shrink:0;margin-top:1px}
+.stale-alert-title{font-weight:700;color:#991b1b;font-size:13.5px;margin-bottom:4px}
+.stale-alert-body{font-size:12.5px;color:#7f1d1d;line-height:1.7}
+.upd-date{font-size:12px;font-weight:600;color:var(--text)}
+.upd-label{font-size:10.5px;color:var(--muted);margin-top:1px}
+.freshness-cell{display:flex;flex-direction:column;gap:3px}
+
+/* HAMBURGER — show on mobile, hide on desktop */
+.ham-btn{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;background:transparent;border:none;z-index:300;flex-shrink:0}
+.ham-btn span{display:block;width:24px;height:3px;background:var(--primary);border-radius:3px;transition:all .25s}
+
+/* OVERLAY */
+.sb-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.45);z-index:199;
+  opacity:0;transition:opacity .25s;
+  pointer-events:none;
+}
+.sb-overlay.show{opacity:1;pointer-events:auto;display:block}
+
+/* Desktop: hide hamburger, show sidebar normally */
+@media(min-width:861px){
+  .ham-btn{display:none!important}
+}
+
+/* Mobile */
+@media(max-width:860px){
+  .sidebar{
+    transform:translateX(-100%);
+    transition:transform .27s cubic-bezier(.4,0,.2,1);
+    z-index:201;
+  }
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .g2,.g3,.g31{grid-template-columns:1fr}
+  .kgrid{grid-template-columns:repeat(2,1fr)}
+  .tb-search{display:none}
+  .content{padding:16px}
+}
+/* LIVE DATA TOAST */
+#live-data-banner{
+  position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  padding:9px 20px;border-radius:40px;font-size:13px;font-weight:500;
+  box-shadow:0 4px 24px rgba(0,0,0,.22);z-index:9999;
+  display:none;align-items:center;gap:8px;white-space:nowrap;
+  font-family:'Sarabun',sans-serif;transition:opacity .4s;
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <h2>ศสท.</h2>
+    <p>ระบบสุขภาพท้องถิ่น</p>
+    <span class="badge">ปีงบ 2568–2570</span>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">ภาพรวม</div>
+    <div class="sb-item active" onclick="go('overview',this)"><span class="icon">🏠</span>Dashboard</div>
+    <div class="sb-item" onclick="go('projects',this)"><span class="icon">📋</span>โครงการ<span class="count">8</span></div>
+
+    <div class="sb-section">การติดตาม</div>
+    <div class="sb-item" onclick="go('finance',this)"><span class="icon">💰</span>งบประมาณ</div>
+    <div class="sb-item" onclick="go('execution',this)"><span class="icon">📈</span>การเบิกจ่าย</div>
+    <div class="sb-item" onclick="go('timeline',this)"><span class="icon">📅</span>ไทม์ไลน์</div>
+
+    <div class="sb-section">เครือข่าย</div>
+    <div class="sb-item" onclick="go('partners',this)"><span class="icon">🤝</span>ภาคีเครือข่าย<span class="count">109</span></div>
+    <div class="sb-item" onclick="go('areas',this)"><span class="icon">🗺️</span>พื้นที่</div>
+    <div class="sb-item" onclick="go('team',this)"><span class="icon">👥</span>ทีมงาน<span class="count">16</span></div>
+
+    <div class="sb-section">ระบบ</div>
+    <div class="sb-item" onclick="go('status',this)"><span class="icon">🔔</span>สถานะข้อมูล<span class="count" id="stale-count" style="background:#94a3b8">—</span></div>
+  </nav>
+  <div class="sb-footer">ข้อมูล ณ มีนาคม 2569</div>
+</aside>
+
+<!-- OVERLAY -->
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="ham-btn" id="ham-btn" onclick="toggleSidebar()" aria-label="เมนู">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="tb-title" id="tb-title">Dashboard ภาพรวม</div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-date" id="currentDate">📅 —</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- ========== OVERVIEW ========== -->
+  <div id="sec-overview" class="sec active">
+    <div class="sbox">
+      <h3>🎯 พันธกิจ ศสท.</h3>
+      <p>ขับเคลื่อนการพัฒนา <strong>ระบบสุขภาพปฐมภูมิโดยท้องถิ่น</strong> ผ่านงานวิจัย นวัตกรรม และการสร้างต้นแบบ — ครอบคลุม Telemedicine/Telehealth, มาตรฐาน รพ.สต., การพัฒนาบุคลากร, LTC และการเสริมพลังจังหวัด ใน <strong>22+ จังหวัด · 109 ภาคี · 4 แหล่งทุน</strong></p>
+    </div>
+    <div id="stale-alert-box"></div>
+    <div class="kgrid">
+      <div class="kcard"><div class="kicon" style="background:#ede9fe">📁</div><div><div class="kval" style="color:#5b21b6">8</div><div class="klabel">โครงการทั้งหมด</div><div class="ksub">ปีงบ 2568–2570</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#dcfce7">💵</div><div><div class="kval" style="color:#065f46">66.5M</div><div class="klabel">งบประมาณรวม (฿)</div><div class="ksub">4 แหล่งทุน</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fef3c7">🗺️</div><div><div class="kval" style="color:#92400e">22+</div><div class="klabel">จังหวัดปฏิบัติการ</div><div class="ksub">ทุกภูมิภาค</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#e0f2fe">🤝</div><div><div class="kval" style="color:#0369a1">109</div><div class="klabel">ภาคีเครือข่าย</div><div class="ksub">บุคคล / องค์กร</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fce7f3">👥</div><div><div class="kval" style="color:#9d174d">16</div><div class="klabel">บุคลากร ศสท.</div><div class="ksub">นักวิจัย+ผู้เชี่ยวชาญ</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#ffedd5">🏥</div><div><div class="kval" style="color:#c2410c">50+</div><div class="klabel">รพ.สต. ในโครงการ</div><div class="ksub">A6801: 3 จังหวัด</div></div></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct">💰 งบตามแหล่งทุน</div></div>
+        <div style="height:210px"><canvas id="funderChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">📊 งบต่อโครงการ (ล้านบาท)</div></div>
+        <div style="height:210px"><canvas id="budgetBarChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct">📌 สรุปโครงการ</div><span class="badge b-blue">8 โครงการ · รวม 66.5 ล้านบาท</span></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>รหัส</th><th>ชื่อโครงการ</th><th>แหล่งทุน</th><th>งบ (฿)</th><th>ระยะ</th><th>สิ้นสุด</th><th>PI</th><th>สถานะ</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pid" style="background:#5b21b6">A6801</span></td><td><div class="pname">Telemedicine → Telehealth + ศูนย์นวัตกรรม</div><div class="psub">ลำปาง · ลำพูน · กระบี่ (50 รพ.สต.)</div></td><td><span class="badge b-bpt">บพท.</span></td><td><strong>17,000,000</strong></td><td>12 ด.</td><td>23/03/2569</td><td class="psub">นพ.ปรีดา</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+            <tr><td><span class="pid" style="background:#2563eb">A6802</span></td><td><div class="pname">ต้นแบบมาตรฐานสุขภาพปฐมภูมิ อปท.</div><div class="psub">แพร่ · ขอนแก่น · จันทบุรี · สงขลา</div></td><td><span class="badge b-bpt">บพท.</span></td><td><strong>3,000,000</strong></td><td>12 ด.</td><td>23/03/2569</td><td class="psub">ปรานอม</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+            <tr><td><span class="pid" style="background:#7c3aed">A6803</span></td><td><div class="pname">ศึกษาความเหมาะสม อบจ. เหนือปฐมภูมิ</div><div class="psub">วิจัยเชิงนโยบาย</div></td><td><span class="badge b-bpt">บพท.</span></td><td><strong>1,000,000</strong></td><td>6 ด.</td><td>23/09/2568</td><td class="psub">—</td><td><span class="badge b-warn">⚠️ ใกล้สิ้นสุด</span></td></tr>
+            <tr><td><span class="pid" style="background:#c2410c">A6804</span></td><td><div class="pname">คู่มือ+หลักสูตร พัฒนาสมรรถนะบุคลากร อบจ.</div><div class="psub">แพร่ · สุพรรณบุรี · ขอนแก่น · ปัตตานี</div></td><td><span class="badge b-swrs">สวรส.</span></td><td><strong>2,508,880</strong></td><td>12 ด.</td><td>31/03/2569</td><td class="psub">นพ.ปรีดา</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+            <tr><td><span class="pid" style="background:#0891b2">A6805</span></td><td><div class="pname">เสริมสร้างจังหวัดเข้มแข็ง ASA</div><div class="psub">เชียงราย · นครสวรรค์ · ตราด · พัทลุง · ขอนแก่น</div></td><td><span class="badge b-sss">สสส.</span></td><td><strong>19,364,672</strong></td><td>24 ด.</td><td>31/05/2570</td><td class="psub">นพ.ปรีดา</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+            <tr><td><span class="pid" style="background:#0e7490">A6806</span></td><td><div class="pname">ยกระดับกลไกสนับสนุนปฐมภูมิ อบจ.</div><div class="psub">12 จังหวัด ทั่วประเทศ</div></td><td><span class="badge b-sss">สสส.</span></td><td><strong>19,128,690</strong></td><td>24 ด.</td><td>30/06/2570</td><td class="psub">นพ.ปรีดา</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+            <tr><td><span class="pid" style="background:#b45309">A6807</span></td><td><div class="pname">วิเคราะห์ระบบดูแลระยะยาว LTC ในชุมชน</div><div class="psub">เพชรบูรณ์ · สตูล · ลพบุรี</div></td><td><span class="badge b-swrs">สวรส.</span></td><td><strong>1,995,235</strong></td><td>7 ด.</td><td>14/03/2569</td><td class="psub">นพ.ปรีดา</td><td><span class="badge b-warn">⚠️ ใกล้สิ้นสุด</span></td></tr>
+            <tr><td><span class="pid" style="background:#059669">B6801</span></td><td><div class="pname">พัฒนาและขับเคลื่อนระบบสุขภาพท้องถิ่น</div><div class="psub">งบดำเนินงานปกติ สช.</div></td><td><span class="badge b-gov">สำนักงบฯ</span></td><td><strong>2,500,000</strong></td><td>12 ด.</td><td>30/09/2569</td><td class="psub">ปรานอม</td><td><span class="badge b-on">ดำเนินการ</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PROJECTS ========== -->
+  <div id="sec-projects" class="sec">
+    <!-- A6801 -->
+    <div class="card" style="border-left:5px solid #5b21b6">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:11px">
+        <div><span class="pid" style="background:#5b21b6;font-size:13px;padding:4px 13px">A6801</span> <span class="badge b-on" style="margin-left:6px">ดำเนินการ</span> <span class="badge b-bpt" style="margin-left:4px">บพท.</span></div>
+        <div style="font-size:12px;color:var(--muted)">24/03/2568 — 23/06/2569 · <strong>15 เดือน</strong> &nbsp;<span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:1px 7px;font-size:11px">⏩ ขยายสัญญาแล้ว</span></div>
+      </div>
+      <h3 style="font-size:14px;font-weight:700;color:#4c1d95;margin-bottom:10px">โครงการต่อยอด Telemedicine → Telehealth และศูนย์นวัตกรรมการจัดการระบบสุขภาพปฐมภูมิต้นแบบ อบจ.ลำปาง ลำพูน และกระบี่</h3>
+      <div class="g3">
+        <div><div class="psub">งบประมาณ</div><div style="font-size:20px;font-weight:800;color:#065f46">17,000,000 ฿</div></div>
+        <div><div class="psub">พื้นที่ปฏิบัติการ</div><div style="font-weight:600;font-size:12.5px">ลำปาง (10) · ลำพูน (20) · กระบี่ (20) รพ.สต.</div></div>
+        <div><div class="psub">ทีมวิจัย</div><div style="font-weight:600;font-size:12.5px">PI: นพ.ปรีดา แต้อารักษ์</div><div class="psub">CO-PI: ภญ.เนตรนภิส สุชนวนิช</div><div class="psub">PM: วินัย สุมิรัตนะ</div></div>
+      </div>
+      <div class="psub" style="margin-bottom:3px">ความคืบหน้า (เดือนที่ 12 จาก 15)</div>
+      <div class="pwrap"><div class="pbar" style="width:80%;background:linear-gradient(90deg,#5b21b6,#a78bfa)"></div></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted)">งวดที่ 1: รับแล้ว ✅ · งวดที่ 2: ส.ค. 2568 ✅ · งวดที่ 3: เม.ย. 2569</div>
+      <div style="margin-top:6px;font-size:11.5px;background:#fef9c3;border-radius:8px;padding:5px 10px;color:#713f12">📋 อนุมัติขยายสัญญาจาก บพท. (อว 9100/1867 ลว. 4 มี.ค. 69) — 24 มี.ค. 68 ถึง 23 มิ.ย. 69</div>
+    </div>
+
+    <!-- A6802 -->
+    <div class="card" style="border-left:5px solid #2563eb">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:11px">
+        <div><span class="pid" style="background:#2563eb;font-size:13px;padding:4px 13px">A6802</span> <span class="badge b-on" style="margin-left:6px">ดำเนินการ</span> <span class="badge b-bpt" style="margin-left:4px">บพท.</span></div>
+        <div style="font-size:12px;color:var(--muted)">24/04/2568 — 23/03/2569 · 12 เดือน</div>
+      </div>
+      <h3 style="font-size:14px;font-weight:700;color:#1d4ed8;margin-bottom:10px">โครงการพัฒนาต้นแบบการดำเนินงานมาตรฐานระบบสุขภาพปฐมภูมิในองค์กรปกครองส่วนท้องถิ่น</h3>
+      <div class="g3">
+        <div><div class="psub">งบประมาณ</div><div style="font-size:20px;font-weight:800;color:#1d4ed8">3,000,000 ฿</div></div>
+        <div><div class="psub">พื้นที่</div><div style="font-weight:600;font-size:12.5px">แพร่ · ขอนแก่น · จันทบุรี · สงขลา</div></div>
+        <div><div class="psub">ทีม</div><div style="font-weight:600;font-size:12.5px">PI: นางสาวปรานอม โอสาร</div><div class="psub">CO-PI: ผศ.ดร.พรฤดี นิธิรัตน์</div></div>
+      </div>
+    </div>
+
+    <!-- A6803 -->
+    <div class="card" style="border-left:5px solid #f59e0b">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:11px">
+        <div><span class="pid" style="background:#d97706;font-size:13px;padding:4px 13px">A6803</span> <span class="badge b-warn" style="margin-left:6px">⚠️ สิ้นสุด ก.ย. 2568</span> <span class="badge b-bpt" style="margin-left:4px">บพท.</span></div>
+        <div style="font-size:12px;color:var(--muted)">24/04/2568 — 23/09/2568 · 6 เดือน</div>
+      </div>
+      <h3 style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:10px">โครงการศึกษาความเหมาะสมของ อบจ. ในการจัดบริการที่สูงกว่าระดับสุขภาพปฐมภูมิ</h3>
+      <div class="g3">
+        <div><div class="psub">งบประมาณ</div><div style="font-size:20px;font-weight:800;color:#d97706">1,000,000 ฿</div></div>
+        <div><div class="psub">ประเภท</div><div style="font-weight:600;font-size:12.5px">วิจัยเชิงนโยบาย · เอกสาร</div></div>
+        <div><div class="psub">deadline</div><div style="font-weight:700;font-size:13px;color:#ef4444">23 กันยายน 2568</div></div>
+        <div><div class="psub">ทีม</div><div style="font-weight:600;font-size:12.5px">PI: ผศ.ดร.วีระศักดิ์ พุทธาศรี</div></div>
+      </div>
+      <div class="warn-box">⚠️ เหลือเวลาน้อย — ควรติดตามความคืบหน้าการส่งรายงานฉบับสมบูรณ์</div>
+    </div>
+
+    <!-- A6804 -->
+    <div class="card" style="border-left:5px solid #c2410c">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:11px">
+        <div><span class="pid" style="background:#c2410c;font-size:13px;padding:4px 13px">A6804</span> <span class="badge b-on" style="margin-left:6px">ดำเนินการ</span> <span class="badge b-swrs" style="margin-left:4px">สวรส.</span></div>
+        <div style="font-size:12px;color:var(--muted)">1/04/2568 — 31/03/2569 · 12 เดือน</div>
+      </div>
+      <h3 style="font-size:14px;font-weight:700;color:#9a3412;margin-bottom:10px">โครงการจัดทำคู่มือและหลักสูตรพัฒนาสมรรถนะบุคลากรด้านสาธารณสุขภายใต้หน่วยบริการปฐมภูมิสังกัด อบจ.</h3>
+      <div class="g3">
+        <div><div class="psub">งบประมาณ</div><div style="font-size:20px;font-weight:800;color:#c2410c">2,508,880 ฿</div></div>
+        <div><div class="psub">พื้นที่</div><div style="font-weight:600;font-size:12.5px">แพร่ · สุพรรณบุรี · ขอนแก่น · ปัตตานี</div></div>
+        <div><div class="psub">ทีม</div><div style="font-weight:600;font-size:12.5px">PI: นพ.ปรีดา แต้อารักษ์</div><div class="psub">CO-PI: ผศ.ดร.พรฤดี นิธิรัตน์</div></div>
+      </div>
+    </div>
+
+    <!-- A6805 + A6806 side by side -->
+    <div class="g2">
+      <div class="card" style="border-left:5px solid #0891b2">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <div><span class="pid" style="background:#0891b2">A6805</span> <span class="badge b-sss" style="margin-left:5px">สสส.</span> <span class="badge" style="margin-left:3px;background:#fef9c3;color:#713f12">24 เดือน</span></div>
+          <div style="font-size:11px;color:var(--muted)">มิ.ย. 2568 — พ.ค. 2570</div>
+        </div>
+        <h3 style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:8px">เสริมสร้างจังหวัดเข้มแข็งโดยใช้พื้นที่เป็นฐาน (ASA)</h3>
+        <div style="font-size:20px;font-weight:800;color:#0369a1;margin-bottom:6px">19,364,672 ฿</div>
+        <div class="psub">เชียงราย · นครสวรรค์ · ตราด · พัทลุง · ขอนแก่น</div>
+        <div class="psub" style="margin-top:3px">PI: นพ.ปรีดา แต้อารักษ์</div>
+      </div>
+      <div class="card" style="border-left:5px solid #0e7490">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <div><span class="pid" style="background:#0e7490">A6806</span> <span class="badge b-sss" style="margin-left:5px">สสส.</span> <span class="badge" style="margin-left:3px;background:#fef9c3;color:#713f12">24 เดือน</span></div>
+          <div style="font-size:11px;color:var(--muted)">ก.ค. 2568 — มิ.ย. 2570</div>
+        </div>
+        <h3 style="font-size:13px;font-weight:700;color:#0e7490;margin-bottom:8px">ยกระดับกลไกสนับสนุนปฐมภูมิ + นวัตกรรม อบจ.</h3>
+        <div style="font-size:20px;font-weight:800;color:#0e7490;margin-bottom:6px">19,128,690 ฿</div>
+        <div class="psub">12 จังหวัด: ลำพูน พิษณุโลก นครสวรรค์ ปทุมธานี สมุทรสงคราม จันทบุรี มหาสารคาม หนองบัวลำภู นครราชสีมา อำนาจเจริญ ภูเก็ต สงขลา</div>
+        <div class="psub" style="margin-top:3px">PI: นพ.ปรีดา แต้อารักษ์</div>
+      </div>
+    </div>
+
+    <!-- A6807 + B6801 -->
+    <div class="g2">
+      <div class="card" style="border-left:4px solid #b45309">
+        <div><span class="pid" style="background:#b45309">A6807</span> <span class="badge b-swrs" style="margin-left:5px">สวรส.</span> <span class="badge b-warn" style="margin-left:3px">⚠️ สิ้นสุด มี.ค. 2569</span></div>
+        <h3 style="font-size:13px;font-weight:700;color:#92400e;margin:8px 0">วิเคราะห์สถานการณ์ระบบดูแลระยะยาว (LTC) ในชุมชน</h3>
+        <div style="font-size:18px;font-weight:800;color:#b45309">1,995,235 ฿</div>
+        <div class="psub" style="margin-top:4px">เพชรบูรณ์ · สตูล · ลพบุรี · 7 เดือน (15/08/68–14/03/69)</div>
+        <div class="psub" style="margin-top:3px">PI: นพ.ปรีดา แต้อารักษ์</div>
+      </div>
+      <div class="card" style="border-left:4px solid #059669">
+        <div><span class="pid" style="background:#059669">B6801</span> <span class="badge b-gov" style="margin-left:5px">สำนักงบประมาณ</span></div>
+        <h3 style="font-size:13px;font-weight:700;color:#065f46;margin:8px 0">พัฒนาและขับเคลื่อนระบบสุขภาพท้องถิ่น</h3>
+        <div style="font-size:18px;font-weight:800;color:#059669">2,500,000 ฿</div>
+        <div class="psub" style="margin-top:4px">งบดำเนินงานปกติ สช. · 1/10/2568–30/09/2569</div>
+        <div class="psub" style="margin-top:3px">PI: นางสาวปรานอม โอสาร</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== FINANCE ========== -->
+  <div id="sec-finance" class="sec">
+    <div class="kgrid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kcard"><div class="kicon" style="background:#dcfce7">💰</div><div><div class="kval" style="color:#065f46">66.5M</div><div class="klabel">งบรวมทั้งหมด</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#ede9fe">🏛️</div><div><div class="kval" style="color:#5b21b6">21M</div><div class="klabel">บพท. (31.6%)</div><div class="ksub">A6801–A6803</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#e0f2fe">💧</div><div><div class="kval" style="color:#0369a1">38.5M</div><div class="klabel">สสส. (57.9%)</div><div class="ksub">A6805–A6806</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#ffedd5">🔬</div><div><div class="kval" style="color:#c2410c">7M</div><div class="klabel">สวรส.+สำนักงบฯ</div><div class="ksub">A6804, A6807, B6801</div></div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="ch"><div class="ct">🍩 สัดส่วนตามโครงการ</div></div><div style="height:260px"><canvas id="budgetDoughnut"></canvas></div></div>
+      <div class="card"><div class="ch"><div class="ct">📊 งบประมาณต่อโครงการ</div></div><div style="height:260px"><canvas id="budgetBar2"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🔍 รายละเอียดงบ A6801 — 17,000,000 ฿</div></div>
+      <div class="g2">
+        <div style="height:220px"><canvas id="a6801Chart"></canvas></div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:7px">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">ค่าตอบแทนบุคลากร</span><strong>3,804,000 ฿ <span style="font-weight:400;color:var(--muted)">(22.4%)</span></strong></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">ค่าจ้าง/บริหารจัดการ</span><strong>1,240,000 ฿ <span style="font-weight:400;color:var(--muted)">(7.3%)</span></strong></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">ค่าใช้สอย/ดำเนินงาน</span><strong>10,222,000 ฿ <span style="font-weight:400;color:var(--muted)">(60.1%)</span></strong></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">ค่าวัสดุ/ครุภัณฑ์</span><strong>34,000 ฿ <span style="font-weight:400;color:var(--muted)">(0.2%)</span></strong></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;border-top:2px solid var(--border)"><span style="color:var(--muted)">Overhead (10%)</span><strong>1,700,000 ฿</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== EXECUTION ========== -->
+  <div id="sec-execution" class="sec">
+    <div class="sbox">
+      <h3>📈 การเบิกจ่ายงบประมาณ — อัตราการเบิกจ่าย (%) รายไตรมาส</h3>
+      <p>ข้อมูลจาก Sheet: finance_plan · Q = ไตรมาส · 🟢 ≥80% · 🟡 50–79% · 🔴 &lt;50%</p>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">💸 อัตราการเบิกจ่าย (จริง/แผน) ทุกโครงการ</div></div>
+      <div id="execChartWrap" style="height:300px"><canvas id="execChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">📋 รายละเอียดแผน vs จริง รายโครงการ</div></div>
+
+      <!-- A6801 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#5b21b6">A6801</span>
+          <span style="font-size:12.5px;font-weight:600">Telehealth — 17,000,000 ฿</span>
+          <span class="badge b-bpt">บพท.</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#5b21b6"></div></div><div class="fc-num">8,755,500</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:55%;background:#a78bfa"></div></div><div class="fc-num">4,817,718</div><div class="fc-pct" style="color:#f59e0b">55%</div></div>
+          </div>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q2</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:64%;background:#5b21b6"></div></div><div class="fc-num">5,593,500</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:0%;background:#a78bfa"></div></div><div class="fc-num">รอเบิก</div><div class="fc-pct" style="color:var(--muted)">—</div></div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- A6802 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#2563eb">A6802</span>
+          <span style="font-size:12.5px;font-weight:600">ต้นแบบมาตรฐานปฐมภูมิ อปท. — 3,000,000 ฿</span>
+          <span class="badge b-bpt">บพท.</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#2563eb"></div></div><div class="fc-num">1,200,000</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:0%;background:#60a5fa"></div></div><div class="fc-num">รอเบิก</div><div class="fc-pct" style="color:var(--muted)">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A6803 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#d97706">A6803</span>
+          <span style="font-size:12.5px;font-weight:600">ศึกษา อบจ. เหนือปฐมภูมิ — 1,000,000 ฿</span>
+          <span class="badge b-warn">⚠️</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#d97706"></div></div><div class="fc-num">566,000</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:69%;background:#fbbf24"></div></div><div class="fc-num">393,553</div><div class="fc-pct" style="color:#10b981">69%</div></div>
+          </div>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q2</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#d97706"></div></div><div class="fc-num">267,500</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:8%;background:#fbbf24"></div></div><div class="fc-num">21,111</div><div class="fc-pct" style="color:#ef4444">8%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A6804 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#c2410c">A6804</span>
+          <span style="font-size:12.5px;font-weight:600">พัฒนาสมรรถนะบุคลากร — 2,508,880 ฿</span>
+          <span class="badge b-swrs">สวรส.</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#c2410c"></div></div><div class="fc-num">1,253,000</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:51%;background:#fb923c"></div></div><div class="fc-num">640,111</div><div class="fc-pct" style="color:#f59e0b">51%</div></div>
+          </div>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q2</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#c2410c"></div></div><div class="fc-num">627,940</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:0%;background:#fb923c"></div></div><div class="fc-num">รอเบิก</div><div class="fc-pct" style="color:var(--muted)">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A6805 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#0891b2">A6805</span>
+          <span style="font-size:12.5px;font-weight:600">ASA จังหวัดเข้มแข็ง — 19,364,672 ฿</span>
+          <span class="badge b-sss">สสส.</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#0891b2"></div></div><div class="fc-num">5,534,846</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:57%;background:#67e8f9"></div></div><div class="fc-num">3,174,807</div><div class="fc-pct" style="color:#f59e0b">57%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A6806 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#0e7490">A6806</span>
+          <span style="font-size:12.5px;font-weight:600">ยกระดับกลไก อบจ. 12 จว. — 19,128,690 ฿</span>
+          <span class="badge b-sss">สสส.</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#0e7490"></div></div><div class="fc-num">6,128,040</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:9%;background:#22d3ee"></div></div><div class="fc-num">524,943</div><div class="fc-pct" style="color:#ef4444">9%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A6807 -->
+      <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#b45309">A6807</span>
+          <span style="font-size:12.5px;font-weight:600">LTC ในชุมชน — 1,995,235 ฿</span>
+          <span class="badge b-swrs">สวรส.</span>
+          <span class="badge b-warn" style="margin-left:3px">⚠️ สิ้นสุดแล้ว</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#b45309"></div></div><div class="fc-num">815,850</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:14%;background:#fbbf24"></div></div><div class="fc-num">115,650</div><div class="fc-pct" style="color:#ef4444">14%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B6801 -->
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="pid" style="background:#059669">B6801</span>
+          <span style="font-size:12.5px;font-weight:600">พัฒนาระบบสุขภาพท้องถิ่น — 2,500,000 ฿</span>
+          <span class="badge b-gov">สำนักงบฯ</span>
+        </div>
+        <div class="fc-row">
+          <div class="fc-label">Q1</div>
+          <div class="fc-bar-wrap">
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">แผน</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:100%;background:#059669"></div></div><div class="fc-num">625,000</div></div>
+            <div class="fc-bar-row"><span style="font-size:10px;width:35px;color:var(--muted)">จริง</span><div class="fc-bar-bg"><div class="fc-bar-fill" style="width:0%;background:#34d399"></div></div><div class="fc-num">รอเบิก</div><div class="fc-pct" style="color:var(--muted)">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TIMELINE ========== -->
+  <div id="sec-timeline" class="sec">
+    <div class="card">
+      <div class="ch"><div class="ct">📅 Gantt Chart — ระยะเวลาโครงการ (2568–2570)</div></div>
+      <div style="overflow-x:auto">
+        <div class="gantt-months">
+          <div class="gm">มี.ค.68</div><div class="gm">เม.ย.</div><div class="gm">พ.ค.</div><div class="gm">มิ.ย.</div>
+          <div class="gm">ก.ค.</div><div class="gm">ส.ค.</div><div class="gm">ก.ย.</div><div class="gm">ต.ค.</div>
+          <div class="gm">พ.ย.</div><div class="gm">ธ.ค.</div><div class="gm">ม.ค.69</div><div class="gm">ก.พ.</div>
+          <div class="gm">มี.ค.</div><div class="gm">เม.ย.</div><div class="gm">พ.ค.</div><div class="gm">มิ.ย.</div>
+          <div class="gm">ก.ค.</div><div class="gm">ส.ค.</div><div class="gm">ก.ย.69</div><div class="gm">…</div><div class="gm">มิ.ย.70</div>
+        </div>
+        <div class="grow"><div class="glabel">A6801 บพท.</div><div class="gtrack"><div class="gbar" style="left:0%;width:57%;background:linear-gradient(90deg,#5b21b6,#a78bfa)">17M Telehealth</div></div></div>
+        <div class="grow"><div class="glabel">A6802 บพท.</div><div class="gtrack"><div class="gbar" style="left:5%;width:52%;background:linear-gradient(90deg,#2563eb,#60a5fa)">3M ต้นแบบปฐมภูมิ</div></div></div>
+        <div class="grow"><div class="glabel">A6803 บพท.</div><div class="gtrack"><div class="gbar" style="left:5%;width:24%;background:linear-gradient(90deg,#d97706,#fbbf24);color:#713f12">1M อบจ.เหนือปฐมภูมิ ⚠️</div></div></div>
+        <div class="grow"><div class="glabel">A6804 สวรส.</div><div class="gtrack"><div class="gbar" style="left:5%;width:57%;background:linear-gradient(90deg,#c2410c,#f97316)">2.5M พัฒนาบุคลากร</div></div></div>
+        <div class="grow"><div class="glabel">A6805 สสส.</div><div class="gtrack"><div class="gbar" style="left:14%;width:86%;background:linear-gradient(90deg,#0891b2,#67e8f9)">19.4M ASA จังหวัดเข้มแข็ง (24ด.)</div></div></div>
+        <div class="grow"><div class="glabel">A6806 สสส.</div><div class="gtrack"><div class="gbar" style="left:19%;width:81%;background:linear-gradient(90deg,#0e7490,#22d3ee)">19.1M ยกระดับกลไก อบจ. (24ด.)</div></div></div>
+        <div class="grow"><div class="glabel">A6807 สวรส.</div><div class="gtrack"><div class="gbar" style="left:24%;width:33%;background:linear-gradient(90deg,#b45309,#d97706)">2M LTC ⚠️</div></div></div>
+        <div class="grow"><div class="glabel">B6801 สำนักงบ</div><div class="gtrack"><div class="gbar" style="left:33%;width:52%;background:linear-gradient(90deg,#059669,#34d399)">2.5M ระบบสุขภาพท้องถิ่น</div></div></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px">
+        <span>🟡 A6803 & A6807 ใกล้สิ้นสุด — ต้องส่งรายงาน</span>
+        <span>🔵 A6805 & A6806 (สสส.) ยาวถึง มิ.ย. 2570</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🎯 Milestone สำคัญ</div></div>
+      <div class="tline">
+        <div class="titem"><div class="tdot" style="background:#5b21b6"></div><div class="tdate">24 มี.ค. 2568</div><div class="tcnt">ลงนาม A6801 (บพท.)</div><div class="tdet">Telehealth 17 ล้านบาท · ลำปาง ลำพูน กระบี่</div></div>
+        <div class="titem"><div class="tdot" style="background:#2563eb"></div><div class="tdate">1–24 เม.ย. 2568</div><div class="tcnt">ลงนาม A6802, A6803, A6804</div><div class="tdet">บพท. + สวรส. · 3 โครงการเริ่มพร้อมกัน</div></div>
+        <div class="titem"><div class="tdot" style="background:#0891b2"></div><div class="tdate">1 มิ.ย. 2568</div><div class="tcnt">เริ่ม A6805 — ASA (สสส.)</div><div class="tdet">19.4 ล้านบาท · 24 เดือน</div></div>
+        <div class="titem"><div class="tdot" style="background:#0e7490"></div><div class="tdate">1 ก.ค. 2568</div><div class="tcnt">เริ่ม A6806 — ยกระดับกลไก อบจ. (สสส.)</div><div class="tdet">19.1 ล้านบาท · 24 เดือน · 12 จังหวัด</div></div>
+        <div class="titem"><div class="tdot" style="background:#b45309"></div><div class="tdate">15 ส.ค. 2568</div><div class="tcnt">เริ่ม A6807 — LTC ในชุมชน (สวรส.)</div><div class="tdet">1.99 ล้านบาท · 7 เดือน</div></div>
+        <div class="titem"><div class="tdot" style="background:#059669"></div><div class="tdate">1 ต.ค. 2568</div><div class="tcnt">เริ่ม B6801 — งบปกติ สช.</div><div class="tdet">2.5 ล้านบาท · 12 เดือน</div></div>
+        <div class="titem"><div class="tdot" style="background:#ef4444"></div><div class="tdate">23 ก.ย. 2568 ⚠️</div><div class="tcnt">สิ้นสุด A6803</div><div class="tdet">ส่งรายงานศึกษา อบจ. เหนือปฐมภูมิ</div></div>
+        <div class="titem"><div class="tdot" style="background:#ef4444"></div><div class="tdate">14 มี.ค. 2569 ⚠️</div><div class="tcnt">สิ้นสุด A6807</div><div class="tdet">ส่งรายงานวิเคราะห์ LTC</div></div>
+        <div class="titem"><div class="tdot" style="background:#5b21b6"></div><div class="tdate">23/31 มี.ค. 2569</div><div class="tcnt">สิ้นสุด A6801, A6802, A6804</div><div class="tdet">3 โครงการหลัก ส่งรายงานฉบับสมบูรณ์</div></div>
+        <div class="titem"><div class="tdot" style="background:#059669"></div><div class="tdate">30 ก.ย. 2569</div><div class="tcnt">สิ้นสุด B6801</div><div class="tdet">ปิดโครงการงบปกติ สช.</div></div>
+        <div class="titem"><div class="tdot" style="background:#0891b2"></div><div class="tdate">พ.ค.–มิ.ย. 2570</div><div class="tcnt">✅ สิ้นสุด A6805 & A6806</div><div class="tdet">ปิดโครงการ สสส. ทั้งสองโครงการ — สิ้นสุดทุกโครงการ</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PARTNERS ========== -->
+  <div id="sec-partners" class="sec">
+    <div class="kgrid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kcard"><div class="kicon" style="background:#e0f2fe">🤝</div><div><div class="kval" style="color:#0369a1">109</div><div class="klabel">ภาคีทั้งหมด</div><div class="ksub">บุคคล / องค์กร</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#dbeafe">🏛️</div><div><div class="kval" style="color:#1d4ed8">42</div><div class="klabel">อบจ. ลำปาง+ลำพูน</div><div class="ksub">ภาคีหลัก A6801</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#d1fae5">🎓</div><div><div class="kval" style="color:#065f46">15+</div><div class="klabel">สถาบันการศึกษา</div><div class="ksub">วพบ., มหาวิทยาลัย</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fef3c7">🏥</div><div><div class="kval" style="color:#92400e">10+</div><div class="klabel">กระทรวง / หน่วยงานรัฐ</div><div class="ksub">สธ., มท., สช., สปสช.</div></div></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct">🏆 องค์กรที่มีภาคีมากที่สุด</div></div>
+        <div style="height:250px"><canvas id="partnerChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">🗺️ ภาคีตามจังหวัด (Top 8)</div></div>
+        <div style="height:250px"><canvas id="provinceChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct">👤 รายชื่อภาคีเครือข่าย</div></div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="partnerSearch" placeholder="ค้นหาชื่อ ตำแหน่ง หรือสังกัด..." oninput="filterPartners()">
+      </div>
+      <div style="overflow-x:auto" class="partner-table">
+        <table class="tbl" id="partnerTable">
+          <thead><tr><th>#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>สังกัด</th><th>จังหวัด</th></tr></thead>
+          <tbody id="partnerBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== AREAS ========== -->
+  <div id="sec-areas" class="sec">
+
+    <!-- GIS MAP CARD -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+      <div class="ch" style="padding:14px 20px;margin-bottom:0;border-bottom:1px solid var(--border)">
+        <div class="ct">🗺️ แผนที่พื้นที่ปฏิบัติการ (GIS)</div>
+        <div style="display:flex;gap:7px;align-items:center">
+          <span class="badge b-blue">22+ จังหวัด</span>
+          <span class="badge b-on">6 โครงการ</span>
+        </div>
+      </div>
+      <!-- Filter bar -->
+      <div class="map-filter-bar" id="map-filter-bar">
+        <button class="mf-btn active" style="color:#374151" onclick="filterMap('all',this)">🌏 ทั้งหมด</button>
+        <button class="mf-btn" style="color:#5b21b6" onclick="filterMap('A6801',this)">● A6801 Telehealth</button>
+        <button class="mf-btn" style="color:#2563eb" onclick="filterMap('A6802',this)">● A6802 ต้นแบบปฐมภูมิ</button>
+        <button class="mf-btn" style="color:#c2410c" onclick="filterMap('A6804',this)">● A6804 พัฒนาบุคลากร</button>
+        <button class="mf-btn" style="color:#0891b2" onclick="filterMap('A6805',this)">● A6805 ASA</button>
+        <button class="mf-btn" style="color:#0e7490" onclick="filterMap('A6806',this)">● A6806 ยกระดับ อบจ.</button>
+        <button class="mf-btn" style="color:#b45309" onclick="filterMap('A6807',this)">● A6807 LTC</button>
+      </div>
+      <div id="gis-map" style="height:480px;z-index:1"></div>
+    </div>
+
+    <div class="kgrid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="kcard"><div class="kicon" style="background:#dbeafe">🌏</div><div><div class="kval" style="color:#1d4ed8">22+</div><div class="klabel">จังหวัดทั้งหมด</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fef3c7">🏔️</div><div><div class="kval" style="color:#92400e">7</div><div class="klabel">ภาคเหนือ</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#d1fae5">🌾</div><div><div class="kval" style="color:#065f46">7</div><div class="klabel">ภาคกลาง/ตะวันออก</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fce7f3">🌻</div><div><div class="kval" style="color:#9d174d">5</div><div class="klabel">ภาคอีสาน</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#ede9fe">🌊</div><div><div class="kval" style="color:#5b21b6">5</div><div class="klabel">ภาคใต้</div></div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct">🗺️ จังหวัดแบ่งตามภาค</div></div>
+        <div style="margin-bottom:13px"><div style="font-size:12.5px;font-weight:700;color:#1d4ed8;margin-bottom:6px">🏔️ ภาคเหนือ</div><div>
+          <span class="ptag pv-n">ลำปาง (A6801)</span><span class="ptag pv-n">ลำพูน (A6801, A6806)</span><span class="ptag pv-n">กระบี่ (A6801)</span><span class="ptag pv-n">เชียงราย (A6805)</span><span class="ptag pv-n">แพร่ (A6802, A6804)</span><span class="ptag pv-n">พิษณุโลก (A6806)</span><span class="ptag pv-n">เพชรบูรณ์ (A6807)</span>
+        </div></div>
+        <div style="margin-bottom:13px"><div style="font-size:12.5px;font-weight:700;color:#065f46;margin-bottom:6px">🌾 ภาคกลาง/ตะวันออก</div><div>
+          <span class="ptag pv-c">นครสวรรค์ (A6805, A6806)</span><span class="ptag pv-c">ปทุมธานี (A6806)</span><span class="ptag pv-c">สมุทรสงคราม (A6806)</span><span class="ptag pv-c">จันทบุรี (A6802, A6806)</span><span class="ptag pv-c">ตราด (A6805)</span><span class="ptag pv-c">สุพรรณบุรี (A6804)</span><span class="ptag pv-c">ลพบุรี (A6807)</span>
+        </div></div>
+        <div style="margin-bottom:13px"><div style="font-size:12.5px;font-weight:700;color:#92400e;margin-bottom:6px">🌻 ภาคอีสาน</div><div>
+          <span class="ptag pv-ne">ขอนแก่น (A6802, A6804, A6805)</span><span class="ptag pv-ne">มหาสารคาม (A6806)</span><span class="ptag pv-ne">หนองบัวลำภู (A6806)</span><span class="ptag pv-ne">นครราชสีมา (A6806)</span><span class="ptag pv-ne">อำนาจเจริญ (A6806)</span>
+        </div></div>
+        <div><div style="font-size:12.5px;font-weight:700;color:#9d174d;margin-bottom:6px">🌊 ภาคใต้</div><div>
+          <span class="ptag" style="background:#fce7f3;color:#9d174d">สงขลา (A6802, A6806)</span><span class="ptag" style="background:#fce7f3;color:#9d174d">ภูเก็ต (A6806)</span><span class="ptag" style="background:#fce7f3;color:#9d174d">พัทลุง (A6805)</span><span class="ptag" style="background:#fce7f3;color:#9d174d">ปัตตานี (A6804)</span><span class="ptag" style="background:#fce7f3;color:#9d174d">สตูล (A6807)</span>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">📊 จำนวนจังหวัดต่อโครงการ</div></div>
+        <div style="height:280px"><canvas id="areaChart"></canvas></div>
+        <div style="margin-top:12px;padding:12px;background:#f0f9ff;border-radius:9px;border:1px solid #bae6fd">
+          <div style="font-size:12.5px;font-weight:700;color:#0369a1;margin-bottom:7px">🏥 รพ.สต. ใน A6801</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:7px"><div style="font-size:18px;font-weight:800;color:#0369a1">10</div><div style="font-size:11px;color:var(--muted)">ลำปาง</div></div>
+            <div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:7px"><div style="font-size:18px;font-weight:800;color:#0369a1">20</div><div style="font-size:11px;color:var(--muted)">ลำพูน</div></div>
+            <div style="flex:1;text-align:center;padding:8px;background:#fff;border-radius:7px"><div style="font-size:18px;font-weight:800;color:#0369a1">20</div><div style="font-size:11px;color:var(--muted)">กระบี่</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== TEAM ========== -->
+  <div id="sec-team" class="sec">
+    <div class="kgrid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kcard"><div class="kicon" style="background:#dbeafe">👥</div><div><div class="kval" style="color:#1d4ed8">16</div><div class="klabel">บุคลากร ศสท.</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#d1fae5">🩺</div><div><div class="kval" style="color:#065f46">2</div><div class="klabel">แพทย์/ที่ปรึกษา</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fef3c7">🔬</div><div><div class="kval" style="color:#92400e">7</div><div class="klabel">นักวิจัย/วิชาการ</div></div></div>
+      <div class="kcard"><div class="kicon" style="background:#fce7f3">⚙️</div><div><div class="kval" style="color:#9d174d">7</div><div class="klabel">ผู้เชี่ยวชาญ/สนับสนุน</div></div></div>
+    </div>
+    <div class="sgrid">
+      <div class="scard" style="border-top:3px solid #0f4c6e"><div class="savatar" style="background:linear-gradient(135deg,#0a3347,#1a6d96);font-size:11px">ปรีดา</div><div><div class="sname">นพ.ปรีดา แต้อารักษ์ (ปี๊ด)</div><div class="stitle">ที่ปรึกษา สช.</div><div class="srole">PI: A6801, A6804, A6805, A6806, A6807</div><div style="margin-top:5px"><span class="skill-tag">Research</span><span class="skill-tag">Health Policy</span><span class="skill-tag">HIS</span><span class="skill-tag">Decentralisation</span></div></div></div>
+      <div class="scard" style="border-top:3px solid #2563eb"><div class="savatar" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);font-size:11px">ปรานอม</div><div><div class="sname">นางสาวปรานอม โอสาร (แต้ม)</div><div class="stitle">หัวหน้าศูนย์ ศสท.</div><div class="srole">PI: A6802, B6801</div></div></div>
+      <div class="scard" style="border-top:3px solid #7c3aed"><div class="savatar" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6);font-size:11px">ประจักษ์</div><div><div class="sname">นพ.ประจักษวิช เล็บนาค</div><div class="stitle">ที่ปรึกษาแพทย์</div><div class="srole">วิชาการ · ระบบสุขภาพ</div></div></div>
+      <div class="scard" style="border-top:3px solid #059669"><div class="savatar" style="background:linear-gradient(135deg,#047857,#10b981);font-size:11px">นิรมล</div><div><div class="sname">นางสาวนิรมล เห็นประเสริฐ (นิ)</div><div class="stitle">ผู้เชี่ยวชาญการเงินและบัญชี</div><div class="srole">💰 บัญชี · งบประมาณ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#0891b2,#67e8f9);font-size:11px">วนิดา</div><div><div class="sname">นางวนิดา คล้ายอ่วม (ดา)</div><div class="stitle">ผู้เชี่ยวชาญนโยบาย/แผนงาน</div><div class="srole">📋 แผน · งบประมาณ · บริหารความเสี่ยง</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#c2410c,#f97316);font-size:11px">วินัย</div><div><div class="sname">วินัย สุมิรัตนะ</div><div class="stitle">PM — A6801</div><div class="srole">📋 บริหารโครงการ Telehealth</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#9d174d,#ec4899);font-size:11px">ภญ.</div><div><div class="sname">ภญ.เนตรนภิส สุชนวนิช</div><div class="stitle">CO-PI A6801</div><div class="srole">💊 เภสัชกรรม · Telehealth</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa);font-size:11px">พรฤ.</div><div><div class="sname">ผศ.ดร.พรฤดี นิธิรัตน์</div><div class="stitle">CO-PI A6802</div><div class="srole">🎓 วิชาการ · ปฐมภูมิ อปท.</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#0f766e,#14b8a6);font-size:11px">รี</div><div><div class="sname">นางพิชญ์นรี แก้วศรชัย (รี)</div><div class="stitle">สนับสนุนงานวิชาการ</div><div class="srole">💼 การเงิน · บัญชี · พัสดุ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);font-size:11px">ปั้น</div><div><div class="sname">นายภชภณ ไทยสวัสดิ์ (ปั้นปั้น)</div><div class="stitle">สนับสนุนงานวิชาการ</div><div class="srole">📢 สื่อสารสุขภาพ · บริหารจัดการ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#0369a1,#38bdf8);font-size:11px">มุก</div><div><div class="sname">นางสาวเมทิกา กวินวรฤทธิ์ (มุก)</div><div class="stitle">สนับสนุนงานบริหารจัดการ</div><div class="srole">🔗 ประสานงาน · บริหาร</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#059669,#34d399);font-size:11px">ส้ม</div><div><div class="sname">นางสาวศรวณีย์ อวนศรี (ส้ม)</div><div class="stitle">สนับสนุนงานวิชาการ</div><div class="srole">📊 Health Economics · Policy Analysis</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#b45309,#fbbf24);font-size:11px">โมเม</div><div><div class="sname">นางสาวณัชฐพร เนตรภักดี (โมเม)</div><div class="stitle">พนักงานโครงการ</div><div class="srole">🔗 ประสานงาน · บริหารจัดการ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#be185d,#f472b6);font-size:11px">สิริ</div><div><div class="sname">นางสาวสิริญา ยงเพชร (สิริ)</div><div class="stitle">สนับสนุนงานวิชาการ</div><div class="srole">🔬 Research · Data · Project Coordination</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#6d28d9,#c4b5fd);font-size:11px">เปีย</div><div><div class="sname">นางสาวนันทิชา ขันเงิน (เปีย)</div><div class="stitle">สนับสนุนงานวิชาการ</div><div class="srole">📋 วิชาการ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#0e7490,#67e8f9);font-size:11px">พลอย</div><div><div class="sname">นางสาวพลอยไพลิน โพธิ์เงิน (พลอย)</div><div class="stitle">พนักงานโครงการ</div><div class="srole">🔗 บริหารจัดการ</div></div></div>
+      <div class="scard"><div class="savatar" style="background:linear-gradient(135deg,#047857,#6ee7b7);font-size:11px">พลอย</div><div><div class="sname">นางสาวอารีรัตน์ รื่นรวย (พลอย)</div><div class="stitle">พนักงานโครงการ</div><div class="srole">🔗 บริหารจัดการ</div></div></div>
+    </div>
+  </div>
+
+  <!-- ========== STATUS ========== -->
+  <div id="sec-status" class="sec">
+    <div class="sbox" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#bbf7d0">
+      <h3 style="color:#166534">📋 เกณฑ์การติดตามข้อมูล</h3>
+      <p style="color:#14532d">ข้อมูล <strong>การเงิน</strong> (แผน vs จริง) และ <strong>กิจกรรมตามแผน</strong> ต้องอัปเดตอย่างน้อย <strong>ทุกสิ้นเดือน</strong><br>
+      🟢 ทันสมัย = อัปเดตภายใน 30 วัน &nbsp;·&nbsp; 🟡 ค้างอยู่ = 31–60 วัน &nbsp;·&nbsp; 🔴 ล่าช้ามาก = เกิน 60 วัน</p>
+    </div>
+
+    <div class="kgrid" id="status-kpi" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px"></div>
+
+    <div class="card">
+      <div class="ch">
+        <div class="ct">🔔 สถานะข้อมูลรายโครงการ</div>
+        <span class="badge b-blue">อัปเดต ณ วันนี้</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr>
+            <th>รหัส</th>
+            <th>โครงการ</th>
+            <th>💰 การเงิน — อัปเดตล่าสุด</th>
+            <th>📋 กิจกรรม — อัปเดตล่าสุด</th>
+            <th>สถานะรวม</th>
+          </tr></thead>
+          <tbody id="status-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:4px solid #dc2626">
+      <div class="ch"><div class="ct">⚡ ต้องดำเนินการเร่งด่วน</div></div>
+      <div id="urgent-list"></div>
+    </div>
+  </div>
+
+  </div><!-- end content -->
+  <div class="footer">ศูนย์วิชาการนโยบายระบบสุขภาพท้องถิ่น (ศสท.) · สำนักงานคณะกรรมการสุขภาพแห่งชาติ (สช.) · อัปเดต มีนาคม 2569</div>
+</div><!-- end main -->
+
+<!-- LIVE DATA BANNER -->
+<div id="live-data-banner"></div>
+
+<script>
+// Date
+document.getElementById('currentDate').textContent='📅 '+new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+
+// MOBILE SIDEBAR
+function toggleSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('sb-overlay');
+  if(sb.classList.contains('open')){
+    sb.classList.remove('open');
+    ov.classList.remove('show');
+    ov.style.display='none';
+  } else {
+    ov.style.display='block';
+    requestAnimationFrame(()=>{
+      sb.classList.add('open');
+      ov.classList.add('show');
+    });
+  }
+}
+function closeSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('sb-overlay');
+  sb.classList.remove('open');
+  ov.classList.remove('show');
+  setTimeout(()=>{ov.style.display='none';},260);
+}
+
+// NAV
+const titles={'overview':'Dashboard ภาพรวม','projects':'โครงการทั้งหมด','finance':'งบประมาณ','execution':'การเบิกจ่าย','timeline':'ไทม์ไลน์','partners':'ภาคีเครือข่าย','areas':'พื้นที่ปฏิบัติการ','team':'ทีมงาน ศสท.','status':'สถานะการอัปเดตข้อมูล'};
+function go(id,el){
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('tb-title').textContent=titles[id]||id;
+  setTimeout(()=>renderCharts(id),60);
+  // close sidebar on mobile after selecting
+  if(window.innerWidth<=860) closeSidebar();
+}
+
+// PARTNERS DATA
+const partners=[
+  {name:'นฤชา โฆษาศิวิไลซ์',title:'นาย',position:'อธิบดีกรมส่งเสริมการปกครองท้องถิ่น',org:'กระทรวงมหาดไทย',province:'กรุงเทพมหานคร'},
+  {name:'อภิสรรค์ บุญประดับ',title:'นาย',position:'ผู้อำนวยการกองสนับสนุนระบบสุขภาพปฐมภูมิ',org:'ปลัดกระทรวงสาธารณสุข',province:'นนทบุรี'},
+  {name:'กมลรัตน์ เทอร์เนอร์',title:'นาง',position:'คณบดีคณะพยาบาลศาสตร์',org:'สถาบันพระบรมราชชนก',province:'นนทบุรี'},
+  {name:'แสงดาว จันทร์ดา',title:'นาง',position:'พยาบาลวิชาชีพชำนาญการพิเศษ',org:'วิทยาลัยพยาบาลบรมราชชนนี ขอนแก่น',province:'ขอนแก่น'},
+  {name:'นิระมล สมตัว',title:'นาง',position:'อาจารย์',org:'วิทยาลัยพยาบาลบรมราชชนนี ขอนแก่น',province:'ขอนแก่น'},
+  {name:'จุรี แสนสุข',title:'นางสาว',position:'อาจารย์',org:'วิทยาลัยพยาบาลบรมราชชนนี ขอนแก่น',province:'ขอนแก่น'},
+  {name:'เนตรนภิส สุชนวนิช',title:'ภญ.',position:'CO-PI A6801',org:'สำนักงานคณะกรรมการสุขภาพแห่งชาติ',province:'กรุงเทพมหานคร'},
+  {name:'พรฤดี นิธิรัตน์',title:'ผศ.ดร.',position:'CO-PI A6802',org:'มหาวิทยาลัย',province:'กรุงเทพมหานคร'},
+  {name:'ตัวแทน อบจ.ลำปาง (21 คน)',title:'—',position:'เจ้าหน้าที่ / ผู้บริหาร อบจ.',org:'องค์การบริหารส่วนจังหวัดลำปาง',province:'ลำปาง'},
+  {name:'ตัวแทน อบจ.ลำพูน (21 คน)',title:'—',position:'เจ้าหน้าที่ / ผู้บริหาร อบจ.',org:'องค์การบริหารส่วนจังหวัดลำพูน',province:'ลำพูน'},
+  {name:'ตัวแทน วพ.พระปกเกล้า จันทบุรี (4 คน)',title:'—',position:'อาจารย์',org:'วิทยาลัยพยาบาลพระปกเกล้า จันทบุรี',province:'จันทบุรี'},
+  {name:'ตัวแทน รามาธิบดี (4 คน)',title:'—',position:'อาจารย์/แพทย์',org:'คณะแพทยศาสตร์ รามาธิบดี มหาวิทยาลัยมหิดล',province:'กรุงเทพมหานคร'},
+  {name:'ตัวแทน สปสช. (3 คน)',title:'—',position:'เจ้าหน้าที่',org:'สำนักงานหลักประกันสุขภาพแห่งชาติ',province:'กรุงเทพมหานคร'},
+  {name:'ตัวแทน วพบ.สงขลา (3 คน)',title:'—',position:'อาจารย์',org:'วิทยาลัยพยาบาลบรมราชชนนี สงขลา',province:'สงขลา'},
+  {name:'ตัวแทน ม.เชียงใหม่ (2 คน)',title:'—',position:'อาจารย์',org:'คณะรัฐศาสตร์และรัฐประศาสนศาสตร์ ม.เชียงใหม่',province:'เชียงใหม่'},
+];
+
+function renderPartners(data){
+  const tbody=document.getElementById('partnerBody');
+  if(!tbody)return;
+  tbody.innerHTML=data.map((p,i)=>`<tr><td style="color:var(--muted);font-size:11px">${i+1}</td><td><div style="font-weight:600;font-size:12.5px">${p.title} ${p.name}</div></td><td class="psub">${p.position}</td><td class="psub">${p.org}</td><td><span class="ptag pv-n" style="font-size:11px">${p.province}</span></td></tr>`).join('');
+}
+function filterPartners(){
+  const q=document.getElementById('partnerSearch').value.toLowerCase();
+  const filtered=partners.filter(p=>(p.name+p.position+p.org+p.province).toLowerCase().includes(q));
+  renderPartners(filtered);
+}
+
+// CHARTS
+const rendered={};
+function renderCharts(id){
+  if(id==='overview'||id==='finance'){
+    if(!rendered.funder){rendered.funder=true;
+      const c=document.getElementById('funderChart');
+      if(c) new Chart(c,{type:'doughnut',data:{labels:['บพท. 21M (31.6%)','สสส. 38.5M (57.9%)','สวรส. 4.5M (6.8%)','สำนักงบฯ 2.5M (3.7%)'],datasets:[{data:[21000000,38493362,4504115,2500000],backgroundColor:['#5b21b6','#0891b2','#c2410c','#059669'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Sarabun',size:11},padding:12,boxWidth:13}},tooltip:{callbacks:{label:ctx=>` ${(ctx.raw/1e6).toFixed(2)} ล้านบาท`}}},cutout:'62%'}});
+    }
+    if(!rendered.budgetBar){rendered.budgetBar=true;
+      const c=document.getElementById('budgetBarChart');
+      if(c) new Chart(c,{type:'bar',data:{labels:['A6801','A6802','A6803','A6804','A6805','A6806','A6807','B6801'],datasets:[{data:[17,3,1,2.51,19.36,19.13,2,2.5],backgroundColor:['#5b21b6','#2563eb','#7c3aed','#c2410c','#0891b2','#0e7490','#b45309','#059669'],borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} M฿`}}},scales:{y:{grid:{color:'#f1f5f9'},ticks:{font:{family:'Sarabun'},callback:v=>v+'M'}},x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:11}}}}}});
+    }
+    if(!rendered.doughnut){rendered.doughnut=true;
+      const c=document.getElementById('budgetDoughnut');
+      if(c) new Chart(c,{type:'doughnut',data:{labels:['A6801(17M)','A6802(3M)','A6803(1M)','A6804(2.5M)','A6805(19.4M)','A6806(19.1M)','A6807(2M)','B6801(2.5M)'],datasets:[{data:[17,3,1,2.51,19.36,19.13,2,2.5],backgroundColor:['#5b21b6','#2563eb','#7c3aed','#c2410c','#0891b2','#0e7490','#b45309','#059669'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{family:'Sarabun',size:11},padding:9,boxWidth:11}},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}M฿`}}},cutout:'55%'}});
+    }
+    if(!rendered.bar2){rendered.bar2=true;
+      const c=document.getElementById('budgetBar2');
+      if(c) new Chart(c,{type:'bar',data:{labels:['A6801','A6802','A6803','A6804','A6805','A6806','A6807','B6801'],datasets:[{data:[17,3,1,2.51,19.36,19.13,2,2.5],backgroundColor:['#5b21b6','#2563eb','#7c3aed','#c2410c','#0891b2','#0e7490','#b45309','#059669'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}M฿`}}},scales:{x:{grid:{color:'#f1f5f9'},ticks:{font:{family:'Sarabun'},callback:v=>v+'M'}},y:{grid:{display:false},ticks:{font:{family:'Sarabun',size:11}}}}}});
+    }
+    if(!rendered.a6801){rendered.a6801=true;
+      const c=document.getElementById('a6801Chart');
+      if(c) new Chart(c,{type:'doughnut',data:{labels:['ค่าตอบแทน 22.4%','ค่าจ้าง 7.3%','ค่าดำเนินงาน 60.1%','ค่าวัสดุ 0.2%','Overhead 10%'],datasets:[{data:[3804000,1240000,10222000,34000,1700000],backgroundColor:['#5b21b6','#00b4b4','#3b82f6','#f59e0b','#8b5cf6'],borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'Sarabun',size:10},padding:8,boxWidth:11}},tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString()}฿`}}},cutout:'58%'}});
+    }
+  }
+  if(id==='execution'){
+    if(!rendered.exec){rendered.exec=true;
+      const c=document.getElementById('execChart');
+      if(c){
+        const eL=window._execLiveData?window._execLiveData.labels:['A6801 Q1','A6801 Q2','A6802 Q1','A6803 Q1','A6803 Q2','A6804 Q1','A6804 Q2','A6805 Q1','A6806 Q1','A6807 Q1','B6801 Q1'];
+        const eP=window._execLiveData?window._execLiveData.plans:[8755500,5593500,1200000,566000,267500,1253000,627940,5534846,6128040,815850,625000];
+        const eA=window._execLiveData?window._execLiveData.actuals:[4817718,0,0,393553,21111,640111,0,3174807,524943,115650,0];
+        const eR=eL.map((_,i)=>eP[i]>0?Math.round(eA[i]/eP[i]*100):0);
+        const eBg=eR.map(r=>r>=80?'rgba(5,150,105,0.85)':r>=50?'rgba(245,158,11,0.85)':'rgba(220,38,38,0.85)');
+        // auto-size height based on number of bars
+        const wrap=document.getElementById('execChartWrap');
+        if(wrap) wrap.style.height=Math.max(260,eL.length*38+40)+'px';
+        const pctPlugin={id:'pctLbl',afterDatasetsDraw(chart){
+          const {ctx,scales:{x}}=chart;
+          ctx.save();
+          chart.getDatasetMeta(0).data.forEach((bar,i)=>{
+            const r=eR[i];
+            const xPos=Math.min(bar.x+6, x.right-28);
+            ctx.fillStyle='#1e293b';ctx.font='bold 11.5px Sarabun,sans-serif';
+            ctx.textAlign='left';ctx.textBaseline='middle';
+            ctx.fillText(r+'%',xPos,bar.y);
+          });
+          ctx.restore();
+        }};
+        new Chart(c,{type:'bar',plugins:[pctPlugin],data:{labels:eL,datasets:[{label:'อัตราเบิกจ่าย (%)',data:eR,backgroundColor:eBg,borderRadius:4,barThickness:18}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const i=ctx.dataIndex;return ` ${eR[i]}%  (จริง ${eA[i].toLocaleString()} / แผน ${eP[i].toLocaleString()} ฿)`;},title:ctx=>[ctx[0].label]}}},scales:{x:{min:0,max:100,grid:{color:'#f1f5f9'},ticks:{font:{family:'Sarabun'},callback:v=>v+'%'},title:{display:true,text:'อัตราการเบิกจ่าย (%)',font:{family:'Sarabun',size:11}}},y:{grid:{display:false},ticks:{font:{family:'Sarabun',size:11}}}}}});
+      }
+    }
+  }
+  if(id==='partners'){
+    renderPartners(partners);
+    if(!rendered.partner){rendered.partner=true;
+      const c=document.getElementById('partnerChart');
+      if(c) new Chart(c,{type:'bar',data:{labels:['อบจ.ลำปาง','อบจ.ลำพูน','วพ.พระปกเกล้า จนทบุรี','สช.','รามาธิบดี','วพบ.สงขลา','สปสช.','วพบ.ขอนแก่น','ม.เชียงใหม่'],datasets:[{data:[21,21,4,4,4,3,3,2,2],backgroundColor:['#0891b2','#0891b2','#5b21b6','#059669','#c2410c','#0e7490','#d97706','#7c3aed','#2563eb'],borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{color:'#f1f5f9'},ticks:{font:{family:'Sarabun'}}},y:{grid:{display:false},ticks:{font:{family:'Sarabun',size:11}}}}}});
+      const c2=document.getElementById('provinceChart');
+      if(c2) new Chart(c2,{type:'doughnut',data:{labels:['ลำพูน(23)','ลำปาง(21)','กรุงเทพฯ(16)','ขอนแก่น(6)','จันทบุรี(4)','พิษณุโลก(3)','สงขลา(3)','อื่นๆ'],datasets:[{data:[23,21,16,6,4,3,3,16],backgroundColor:['#0891b2','#2563eb','#ef4444','#f59e0b','#5b21b6','#059669','#0e7490','#94a3b8'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{family:'Sarabun',size:11},padding:8,boxWidth:11}}},cutout:'50%'}});
+    }
+  }
+  if(id==='areas'){
+    if(!rendered.area){rendered.area=true;
+      const c=document.getElementById('areaChart');
+      if(c) new Chart(c,{type:'bar',data:{labels:['A6801','A6802','A6804','A6805','A6806','A6807'],datasets:[{label:'จำนวนจังหวัด',data:[3,4,4,5,12,3],backgroundColor:['#5b21b6','#2563eb','#c2410c','#0891b2','#0e7490','#b45309'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} จังหวัด`}}},scales:{y:{grid:{color:'#f1f5f9'},beginAtZero:true,ticks:{font:{family:'Sarabun'}}},x:{grid:{display:false},ticks:{font:{family:'Sarabun',size:12}}}}}});
+    }
+    // Init Leaflet map
+    setTimeout(()=>{
+      initMap();
+      if(_map) _map.invalidateSize();
+      filterMap(_activeFilter);
+    },150);
+  }
+}
+
+// ─── DATA FRESHNESS ──────────────────────────────────────────────────────────
+// อัปเดตวันที่ล่าสุดในฟิลด์ finance/activity ของแต่ละโครงการได้ที่นี่
+const projectUpdates=[
+  {id:'A6801',color:'#5b21b6',name:'Telehealth ลำปาง/ลำพูน/กระบี่',  finance:'25 มี.ค. 2569', activity:'27 มี.ค. 2569', fTs:new Date(2026,2,25), aTs:new Date(2026,2,27), ended:false},
+  {id:'A6802',color:'#2563eb',name:'ต้นแบบมาตรฐานปฐมภูมิ อปท.',      finance:'25 มี.ค. 2569', activity:'26 มี.ค. 2569', fTs:new Date(2026,2,25), aTs:new Date(2026,2,26), ended:false},
+  {id:'A6803',color:'#d97706',name:'ศึกษา อบจ. เหนือปฐมภูมิ',          finance:'28 ก.พ. 2569', activity:'31 ม.ค. 2569', fTs:new Date(2026,1,28), aTs:new Date(2026,0,31), ended:false},
+  {id:'A6804',color:'#c2410c',name:'พัฒนาสมรรถนะบุคลากร',             finance:'31 ม.ค. 2569', activity:'31 ม.ค. 2569', fTs:new Date(2026,0,31), aTs:new Date(2026,0,31), ended:false},
+  {id:'A6805',color:'#0891b2',name:'ASA จังหวัดเข้มแข็ง',              finance:'28 มี.ค. 2569', activity:'28 มี.ค. 2569', fTs:new Date(2026,2,28), aTs:new Date(2026,2,28), ended:false},
+  {id:'A6806',color:'#0e7490',name:'ยกระดับกลไก อบจ. 12 จว.',          finance:'30 พ.ย. 2568', activity:'28 ก.พ. 2569', fTs:new Date(2025,10,30),aTs:new Date(2026,1,28), ended:false},
+  {id:'A6807',color:'#b45309',name:'LTC ในชุมชน',                       finance:'28 ก.พ. 2569', activity:'28 ก.พ. 2569', fTs:new Date(2026,1,28), aTs:new Date(2026,1,28), ended:true, endNote:'สิ้นสุด 14 มี.ค. 2569 — รอส่งรายงาน'},
+  {id:'B6801',color:'#059669',name:'ระบบสุขภาพท้องถิ่น (สช.)',         finance:'31 ม.ค. 2569', activity:'28 ก.พ. 2569', fTs:new Date(2026,0,31), aTs:new Date(2026,1,28), ended:false},
+];
+
+function dSince(d){return Math.floor((new Date()-d)/86400000);}
+
+function stBadge(days,ended){
+  if(ended) return {cls:'',sty:'background:#f1f5f9;color:#64748b',txt:'สิ้นสุดแล้ว',lvl:'ended'};
+  if(days>60) return {cls:'',sty:'background:#fee2e2;color:#991b1b',txt:'🔴 ล่าช้ามาก ('+days+' วัน)',lvl:'red'};
+  if(days>30) return {cls:'b-warn',sty:'',txt:'🟡 ค้างอยู่ ('+days+' วัน)',lvl:'yellow'};
+  return {cls:'b-on',sty:'',txt:'🟢 ทันสมัย',lvl:'green'};
+}
+
+function renderStatus(){
+  const tbody=document.getElementById('status-tbody');
+  if(!tbody) return;
+  let g=0,y=0,r=0,e=0;
+  const rows=projectUpdates.map(p=>{
+    const fd=dSince(p.fTs), ad=dSince(p.aTs);
+    const fs=stBadge(fd,p.ended), as_=stBadge(ad,p.ended);
+    const ovLvl=p.ended?'ended':(fd>60||ad>60?'red':(fd>30||ad>30?'yellow':'green'));
+    if(ovLvl==='green')g++; else if(ovLvl==='yellow')y++; else if(ovLvl==='red')r++; else e++;
+    const ovBadge=p.ended?'<span class="badge" style="background:#f1f5f9;color:#64748b;font-size:12px">⬜ สิ้นสุดแล้ว</span>':
+      ovLvl==='red'?'<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:12px">🔴 วิกฤต</span>':
+      ovLvl==='yellow'?'<span class="badge b-warn" style="font-size:12px">🟡 ค้างอยู่</span>':
+      '<span class="badge b-on" style="font-size:12px">🟢 ปกติ</span>';
+    const rowBg=ovLvl==='red'?'background:#fff7f7':ovLvl==='yellow'?'background:#fffbeb':'';
+    return `<tr style="${rowBg}">
+      <td><span class="pid" style="background:${p.color}">${p.id}</span></td>
+      <td><div class="pname">${p.name}</div>${p.endNote?`<div class="psub" style="color:#dc2626;margin-top:2px">${p.endNote}</div>`:''}</td>
+      <td class="freshness-cell"><div class="upd-date">${p.finance}</div><div class="upd-label">${p.ended?'—':fd+' วันที่แล้ว'}</div><span class="badge ${fs.cls}" ${fs.sty?`style="${fs.sty}"`:''}>${fs.txt}</span></td>
+      <td class="freshness-cell"><div class="upd-date">${p.activity}</div><div class="upd-label">${p.ended?'—':ad+' วันที่แล้ว'}</div><span class="badge ${as_.cls}" ${as_.sty?`style="${as_.sty}"`:''}>${as_.txt}</span></td>
+      <td>${ovBadge}</td>
+    </tr>`;
+  });
+  tbody.innerHTML=rows.join('');
+
+  // KPI cards
+  const kpi=document.getElementById('status-kpi');
+  if(kpi) kpi.innerHTML=`
+    <div class="kcard"><div class="kicon" style="background:#d1fae5">🟢</div><div><div class="kval" style="color:#065f46">${g}</div><div class="klabel">ทันสมัย</div><div class="ksub">≤ 30 วัน</div></div></div>
+    <div class="kcard"><div class="kicon" style="background:#fef3c7">🟡</div><div><div class="kval" style="color:#92400e">${y}</div><div class="klabel">ค้างอยู่</div><div class="ksub">31–60 วัน</div></div></div>
+    <div class="kcard"><div class="kicon" style="background:#fee2e2">🔴</div><div><div class="kval" style="color:#991b1b">${r}</div><div class="klabel">ล่าช้ามาก</div><div class="ksub">&gt; 60 วัน</div></div></div>
+    <div class="kcard"><div class="kicon" style="background:#f1f5f9">⬜</div><div><div class="kval" style="color:#64748b">${e}</div><div class="klabel">สิ้นสุดแล้ว</div></div></div>`;
+
+  // Sidebar badge
+  const sc=document.getElementById('stale-count');
+  const stale=y+r;
+  if(sc){sc.textContent=stale; sc.style.background=r>0?'#dc2626':y>0?'#d97706':'#16a34a';}
+
+  // Overview alert
+  const alertBox=document.getElementById('stale-alert-box');
+  if(alertBox){
+    const staleProjects=projectUpdates.filter(p=>!p.ended&&(dSince(p.fTs)>30||dSince(p.aTs)>30));
+    if(staleProjects.length>0){
+      const names=staleProjects.map(p=>p.id).join(', ');
+      const hasRed=staleProjects.some(p=>dSince(p.fTs)>60||dSince(p.aTs)>60);
+      alertBox.innerHTML=`<div class="stale-alert"><div class="stale-alert-icon">${hasRed?'🔴':'🟡'}</div><div><div class="stale-alert-title">พบ ${staleProjects.length} โครงการที่ยังไม่อัปเดตข้อมูลประจำเดือน</div><div class="stale-alert-body">โครงการ: <strong>${names}</strong><br>ข้อมูลการเงินหรือกิจกรรมล่าช้าเกิน 30 วัน — กรุณาอัปเดตใน Google Sheets ภายในสิ้นเดือน <strong>31 มี.ค. 2569</strong>&nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline;color:#991b1b" onclick="document.querySelector('[onclick*=status]').click()">ดูรายละเอียด →</span></div></div></div>`;
+    } else {
+      alertBox.innerHTML=`<div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#065f46;display:flex;align-items:center;gap:8px"><span>✅</span><strong>ข้อมูลทุกโครงการทันสมัย</strong> — อัปเดตภายใน 30 วันที่ผ่านมาทั้งหมด</div>`;
+    }
+  }
+
+  // Urgent list
+  const urgentList=document.getElementById('urgent-list');
+  if(urgentList){
+    const urgents=projectUpdates.filter(p=>!p.ended&&(dSince(p.fTs)>30||dSince(p.aTs)>30));
+    if(urgents.length===0){
+      urgentList.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ ไม่มีโครงการที่ต้องดำเนินการเร่งด่วน</div>';
+    } else {
+      urgentList.innerHTML=urgents.map(p=>{
+        const fd=dSince(p.fTs),ad=dSince(p.aTs);
+        const issues=[];
+        if(fd>30) issues.push(`การเงิน <span style="font-weight:700;color:${fd>60?'#dc2626':'#d97706'}">${fd} วัน</span>`);
+        if(ad>30) issues.push(`กิจกรรม <span style="font-weight:700;color:${ad>60?'#dc2626':'#d97706'}">${ad} วัน</span>`);
+        const maxD=Math.max(fd,ad);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)">
+          <span class="pid" style="background:${p.color};flex-shrink:0">${p.id}</span>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${p.name}</div>
+            <div style="font-size:12px;margin-top:3px;color:var(--muted)">ค้างอยู่: ${issues.join(' · ')}</div>
+          </div>
+          <span class="badge" style="${maxD>60?'background:#fee2e2;color:#991b1b':'background:#fef3c7;color:#92400e'}">${maxD>60?'🔴 วิกฤต':'🟡 ค้างอยู่'}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// ─── GIS MAP ──────────────────────────────────────────────────────────────────
+const mapData=[
+  // A6801 บพท. Telehealth — ลำปาง ลำพูน กระบี่
+  {prov:'ลำปาง',    lat:18.2888,lng:99.4979, pid:'A6801',color:'#5b21b6',bgc:'#ede9fe',detail:'10 รพ.สต. · Telehealth'},
+  {prov:'ลำพูน',    lat:18.5775,lng:99.0087, pid:'A6801',color:'#5b21b6',bgc:'#ede9fe',detail:'20 รพ.สต. · Telehealth'},
+  {prov:'กระบี่',   lat:8.1000, lng:98.9063, pid:'A6801',color:'#5b21b6',bgc:'#ede9fe',detail:'20 รพ.สต. · Telehealth'},
+  // A6802 บพท. ต้นแบบปฐมภูมิ — แพร่ ขอนแก่น จันทบุรี สงขลา
+  {prov:'แพร่',     lat:18.1445,lng:100.129, pid:'A6802',color:'#2563eb',bgc:'#dbeafe',detail:'ต้นแบบมาตรฐานปฐมภูมิ'},
+  {prov:'ขอนแก่น',  lat:16.4419,lng:102.836, pid:'A6802',color:'#2563eb',bgc:'#dbeafe',detail:'ต้นแบบมาตรฐานปฐมภูมิ'},
+  {prov:'จันทบุรี', lat:12.6105,lng:102.104, pid:'A6802',color:'#2563eb',bgc:'#dbeafe',detail:'ต้นแบบมาตรฐานปฐมภูมิ'},
+  {prov:'สงขลา',    lat:7.1897, lng:100.595, pid:'A6802',color:'#2563eb',bgc:'#dbeafe',detail:'ต้นแบบมาตรฐานปฐมภูมิ'},
+  // A6804 สวรส. พัฒนาบุคลากร — แพร่ สุพรรณบุรี ขอนแก่น ปัตตานี
+  {prov:'แพร่',     lat:18.1445,lng:100.129, pid:'A6804',color:'#c2410c',bgc:'#ffedd5',detail:'พัฒนาสมรรถนะบุคลากร'},
+  {prov:'สุพรรณบุรี',lat:14.4746,lng:100.118,pid:'A6804',color:'#c2410c',bgc:'#ffedd5',detail:'พัฒนาสมรรถนะบุคลากร'},
+  {prov:'ขอนแก่น',  lat:16.4419,lng:102.836, pid:'A6804',color:'#c2410c',bgc:'#ffedd5',detail:'พัฒนาสมรรถนะบุคลากร'},
+  {prov:'ปัตตานี',  lat:6.8693, lng:101.250, pid:'A6804',color:'#c2410c',bgc:'#ffedd5',detail:'พัฒนาสมรรถนะบุคลากร'},
+  // A6805 สสส. ASA — เชียงราย นครสวรรค์ ตราด พัทลุง ขอนแก่น
+  {prov:'เชียงราย', lat:19.9105,lng:99.8406, pid:'A6805',color:'#0891b2',bgc:'#e0f2fe',detail:'ASA จังหวัดเข้มแข็ง'},
+  {prov:'นครสวรรค์',lat:15.7030,lng:100.137, pid:'A6805',color:'#0891b2',bgc:'#e0f2fe',detail:'ASA จังหวัดเข้มแข็ง'},
+  {prov:'ตราด',     lat:12.2428,lng:102.518, pid:'A6805',color:'#0891b2',bgc:'#e0f2fe',detail:'ASA จังหวัดเข้มแข็ง'},
+  {prov:'พัทลุง',   lat:7.6173, lng:100.075, pid:'A6805',color:'#0891b2',bgc:'#e0f2fe',detail:'ASA จังหวัดเข้มแข็ง'},
+  {prov:'ขอนแก่น',  lat:16.4419,lng:102.836, pid:'A6805',color:'#0891b2',bgc:'#e0f2fe',detail:'ASA จังหวัดเข้มแข็ง'},
+  // A6806 สสส. ยกระดับกลไก อบจ. 12 จว.
+  {prov:'ลำพูน',    lat:18.5775,lng:99.0087, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'พิษณุโลก', lat:16.8211,lng:100.266, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'นครสวรรค์',lat:15.7030,lng:100.137, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'ปทุมธานี', lat:14.0208,lng:100.525, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'สมุทรสงคราม',lat:13.4098,lng:99.998,pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'จันทบุรี', lat:12.6105,lng:102.104, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'มหาสารคาม',lat:16.0137,lng:103.162, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'หนองบัวลำภู',lat:17.2018,lng:102.426,pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'นครราชสีมา',lat:14.9799,lng:102.098,pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'อำนาจเจริญ',lat:15.8656,lng:104.626,pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'ภูเก็ต',   lat:7.8804, lng:98.3923, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  {prov:'สงขลา',    lat:7.1897, lng:100.595, pid:'A6806',color:'#0e7490',bgc:'#cffafe',detail:'ยกระดับกลไกสนับสนุน อบจ.'},
+  // A6807 สวรส. LTC — เพชรบูรณ์ สตูล ลพบุรี
+  {prov:'เพชรบูรณ์',lat:16.4189,lng:101.159, pid:'A6807',color:'#b45309',bgc:'#fef3c7',detail:'LTC ในชุมชน'},
+  {prov:'สตูล',     lat:6.6237, lng:100.067, pid:'A6807',color:'#b45309',bgc:'#fef3c7',detail:'LTC ในชุมชน'},
+  {prov:'ลพบุรี',   lat:14.7995,lng:100.653, pid:'A6807',color:'#b45309',bgc:'#fef3c7',detail:'LTC ในชุมชน'},
+];
+
+let _map=null, _markers=[], _activeFilter='all';
+
+function initMap(){
+  if(_map) return;
+  _map=L.map('gis-map',{zoomControl:true,scrollWheelZoom:false}).setView([13.5,101.5],6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a>',maxZoom:14
+  }).addTo(_map);
+
+  // Group by province to compute jitter
+  const provGroups={};
+  mapData.forEach(p=>{
+    if(!provGroups[p.prov]) provGroups[p.prov]=[];
+    provGroups[p.prov].push(p);
+  });
+
+  Object.values(provGroups).forEach(pts=>{
+    const n=pts.length;
+    pts.forEach((p,i)=>{
+      const angle=(2*Math.PI*i)/n - Math.PI/2;
+      const r=n>1?0.12:0;
+      const lat=p.lat+r*Math.sin(angle);
+      const lng=p.lng+r*Math.cos(angle);
+      const m=L.circleMarker([lat,lng],{
+        radius:10, fillColor:p.color, color:'#fff',
+        weight:2.5, opacity:1, fillOpacity:0.88,
+        pane:'markerPane'
+      });
+      // Build tooltip showing all projects in this province
+      const siblings=provGroups[p.prov].map(s=>`<span style="display:inline-block;background:${s.color};color:#fff;padding:1px 7px;border-radius:10px;font-size:11px;margin:1px">${s.pid}</span>`).join(' ');
+      m.bindTooltip(`<div style="min-width:170px"><strong style="font-size:13px">${p.prov}</strong><br><div style="margin-top:4px">${siblings}</div><div style="font-size:11.5px;color:#64748b;margin-top:3px">${p.detail}</div></div>`,{sticky:true});
+      m.bindPopup(`<div style="font-family:'Sarabun',sans-serif;min-width:190px"><div style="font-size:14px;font-weight:700;margin-bottom:6px">📍 ${p.prov}</div>${provGroups[p.prov].map(s=>`<div style="display:flex;align-items:center;gap:7px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="display:inline-block;background:${s.color};color:#fff;padding:1px 8px;border-radius:8px;font-size:11.5px;font-weight:700">${s.pid}</span><span style="font-size:12px;color:#475569">${s.detail}</span></div>`).join('')}</div>`,{maxWidth:260});
+      m._pid=p.pid;
+      _markers.push(m);
+      m.addTo(_map);
+    });
+  });
+
+  // Province count overlay per province (summary dot with count)
+  Object.entries(provGroups).forEach(([prov,pts])=>{
+    if(pts.length>1){
+      const lat=pts[0].lat, lng=pts[0].lng;
+      const icon=L.divIcon({
+        className:'',
+        html:`<div style="background:rgba(255,255,255,.9);border:1px solid #cbd5e1;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0f172a;box-shadow:0 1px 4px rgba(0,0,0,.2)">${pts.length}</div>`,
+        iconSize:[18,18],iconAnchor:[9,9]
+      });
+      L.marker([lat+0.03,lng+0.03],{icon,zIndexOffset:100}).addTo(_map);
+    }
+  });
+}
+
+function filterMap(pid,btn){
+  _activeFilter=pid;
+  document.querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  _markers.forEach(m=>{
+    const show=pid==='all'||m._pid===pid;
+    if(show) m.setStyle({opacity:1,fillOpacity:.88});
+    else m.setStyle({opacity:.12,fillOpacity:.08});
+  });
+}
+
+// ─── UPDATE FC-ROWS FROM LIVE DATA ───────────────────────────────────────────
+function updateFcRows(labels,plans,actuals){
+  // Build map: "A6801 Q1" → {plan, actual, pct}
+  const dataMap={};
+  labels.forEach((lbl,i)=>{
+    const pv=plans[i]||0, av=actuals[i]||0;
+    const pct=pv>0?Math.round(av/pv*100):0;
+    dataMap[lbl]={plan:pv,actual:av,pct};
+  });
+
+  // Color helper
+  function pctColor(p){return p>=80?'#10b981':p>=50?'#f59e0b':'#ef4444';}
+  function barColor(baseColor,p){return p===0?baseColor:baseColor;}
+
+  // Find all project blocks in fc section by pid label
+  document.querySelectorAll('#sec-execution .pid').forEach(pidEl=>{
+    const pid=pidEl.textContent.trim();
+    const block=pidEl.closest('div[style*="margin-bottom"]')||pidEl.closest('div');
+    if(!block) return;
+    block.querySelectorAll('.fc-row').forEach(row=>{
+      const labelEl=row.querySelector('.fc-label');
+      if(!labelEl) return;
+      const qText=labelEl.textContent.trim(); // "Q1","Q2",...
+      const key=`${pid} ${qText}`;
+      const d=dataMap[key];
+      if(!d) return;
+
+      const fills=row.querySelectorAll('.fc-bar-fill');
+      const nums=row.querySelectorAll('.fc-num');
+      const pcts=row.querySelectorAll('.fc-pct');
+
+      // Row 0 = แผน, Row 1 = จริง
+      if(fills[0]) fills[0].style.width='100%';
+      if(nums[0]) nums[0].textContent=d.plan.toLocaleString('th-TH');
+
+      if(fills[1]){
+        fills[1].style.width=(d.pct||0)+'%';
+      }
+      if(nums[1]) nums[1].textContent=d.actual>0?d.actual.toLocaleString('th-TH'):'รอเบิก';
+      if(pcts[0]){
+        if(d.actual>0){
+          pcts[0].textContent=d.pct+'%';
+          pcts[0].style.color=pctColor(d.pct);
+        } else {
+          pcts[0].textContent='—';
+          pcts[0].style.color='var(--muted)';
+        }
+      }
+    });
+  });
+}
+
+
+const SHEET_ID='1UBkagiie1PL7bfQubiS3tloclnj1zYwshZv5ed8tASw';
+
+async function fetchGSheet(sheetName){
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const res=await fetch(url);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const text=await res.text();
+  const start=text.indexOf('{'), end=text.lastIndexOf('}')+1;
+  const json=JSON.parse(text.substring(start,end));
+  if(json.status==='error') throw new Error((json.errors&&json.errors[0]&&json.errors[0].message)||'Sheet error');
+  return json.table;
+}
+
+function gvizVal(cell){
+  if(!cell||cell.v===null||cell.v===undefined) return null;
+  return cell.v;
+}
+
+function gvizDate(cell){
+  const v=gvizVal(cell);
+  if(!v) return null;
+  if(typeof v==='string'){
+    const m=v.match(/^Date\((\d+),(\d+),(\d+)\)$/);
+    if(m) return new Date(+m[1],+m[2],+m[3]);
+    const d=new Date(v);
+    return isNaN(d.getTime())?null:d;
+  }
+  if(v instanceof Date) return v;
+  return null;
+}
+
+function thaiDateShort(d){
+  if(!d) return '—';
+  const mo=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${d.getDate()} ${mo[d.getMonth()]} ${d.getFullYear()+543}`;
+}
+
+async function loadLiveData(){
+  const banner=document.getElementById('live-data-banner');
+  function showBanner(bg,color,txt){
+    if(!banner) return;
+    banner.style.background=bg; banner.style.color=color;
+    banner.textContent=txt; banner.style.display='flex';
+  }
+  showBanner('#1e293b','#fff','⏳ กำลังโหลดข้อมูลล่าสุดจาก Google Sheets...');
+  try{
+    // ── 1. data_status sheet ──────────────────────────────────────────────────
+    const statusTable=await fetchGSheet('data_status');
+    if(statusTable&&statusTable.rows&&statusTable.rows.length>0){
+      // data_status มี header หลายแถว — scan ทุก row หา proj_ID (A6801–B6801)
+      const projRe=/^[AB]\d{4}$/;
+      const liveMap={};
+      statusTable.rows.forEach(row=>{
+        const c=row.c;
+        if(!c||!c[0]||!c[0].v) return;
+        const id=c[0].v.toString().trim();
+        if(!projRe.test(id)) return; // ข้าม header/note rows
+        // col: 0=id, 1=ชื่อ, 2=วันการเงิน, 3=วันกิจกรรม, 4=หมายเหตุ, 5=สิ้นสุด
+        liveMap[id]={
+          fDate:c[2]?gvizDate(c[2]):null,
+          aDate:c[3]?gvizDate(c[3]):null,
+          note:c[4]&&c[4].v?c[4].v.toString():'',
+          ended:c[5]&&c[5].v?String(c[5].v).trim().toLowerCase()==='true':false
+        };
+      });
+      projectUpdates.forEach(p=>{
+        const live=liveMap[p.id];
+        if(!live) return;
+        if(live.fDate){p.fTs=live.fDate; p.finance=thaiDateShort(live.fDate);}
+        if(live.aDate){p.aTs=live.aDate; p.activity=thaiDateShort(live.aDate);}
+        if(live.note) p.endNote=live.note;
+        p.ended=live.ended;
+      });
+    }
+    // ── 2. finance_plan2 sheet ────────────────────────────────────────────────
+    // Layout: TRANSPOSED — row0=proj_IDs, col0=quarter labels (Plan68-Q2, Actual68-Q2 ...)
+    // Each column = one project (A6801..A6807)
+    // Each row = one data type per quarter
+    try{
+      const planTable=await fetchGSheet('finance_plan2');
+      if(planTable&&planTable.rows&&planTable.rows.length>0){
+        // Row 0 = proj_ID headers (A6801, A6802 ...)
+        const projIds=planTable.rows[0].c.map(cell=>gvizVal(cell)?gvizVal(cell).toString().trim():'');
+
+        // Build map: rowLabel → colIndex → value
+        // rowLabel examples: "Plan68-Q2", "Actual68-Q2" (เดิม)
+        //                    "แผน มค-มีค 68", "ผล ตค-ธค 67" (ใหม่)
+        const rowMap={}; // rowLabel → array of values by col
+        planTable.rows.forEach((row,ri)=>{
+          if(ri===0||ri===1) return; // skip header rows
+          const label=gvizVal(row.c[0]);
+          if(!label) return;
+          rowMap[label.toString().trim()]=row.c.map(cell=>gvizVal(cell));
+        });
+
+        // Thai month → quarter mapping
+        const thaiMonthMap={
+          'ตค-ธค':4,'ตค–ธค':4,'ต.ค.-ธ.ค.':4,
+          'มค-มีค':1,'มค–มีค':1,'ม.ค.-มี.ค.':1,'มค-มีีค':1,
+          'เมย-มิย':2,'เมย–มิย':2,'เม.ย.-มิ.ย.':2,
+          'กค-กย':3,'กค–กย':3,'ก.ค.-ก.ย.':3
+        };
+
+        // Parse quarter label — รองรับทั้ง English และ Thai format
+        function parseQLabel(lbl){
+          const s=lbl.toString().trim();
+          // English: Plan68-Q2 / Actual68-Q3
+          const eng=s.toLowerCase().replace(/\s/g,'');
+          const type=eng.startsWith('actual')||s.startsWith('ผล')?'actual':'plan';
+          const mEng=eng.match(/(\d{2})-?q(\d)/);
+          if(mEng) return {type,year:parseInt(mEng[1]),q:parseInt(mEng[2])};
+          // Thai: "ผล ตค-ธค 67" / "แผน มค-มีค 68"
+          const mThai=s.match(/^(ผล|แผน)\s+(.+?)\s+(\d{2})$/);
+          if(mThai){
+            const monthKey=Object.keys(thaiMonthMap).find(k=>mThai[2].includes(k.replace('–','-')));
+            const q=monthKey?thaiMonthMap[monthKey]:null;
+            if(q) return {type:mThai[1]==='ผล'?'actual':'plan',year:parseInt(mThai[3]),q};
+          }
+          return null;
+        }
+
+        // Group plan/actual pairs by (year,q)
+        const quarterKeys={}; // "68-2" → {planLabel, actualLabel}
+        Object.keys(rowMap).forEach(lbl=>{
+          const p=parseQLabel(lbl);
+          if(!p) return;
+          const key=`${p.year}-${p.q}`;
+          if(!quarterKeys[key]) quarterKeys[key]={};
+          quarterKeys[key][p.type+'Label']=lbl;
+        });
+
+        const labels=[],plans=[],actuals=[];
+        // Sort quarters chronologically
+        Object.keys(quarterKeys).sort().forEach(key=>{
+          const {planLabel,actualLabel}=quarterKeys[key];
+          if(!planLabel) return;
+          const planRow=rowMap[planLabel]||[];
+          const actRow=actualLabel?rowMap[actualLabel]||[]:[];
+          // For each project column
+          projIds.forEach((pid,ci)=>{
+            if(!pid||pid==='proj_ID'||pid==='ชื่อโครงการ') return;
+            const pv=planRow[ci]!==null&&planRow[ci]!==undefined&&planRow[ci]!==''&&planRow[ci]!==0?Number(planRow[ci]):null;
+            const av=actRow[ci]!==null&&actRow[ci]!==undefined&&actRow[ci]!==''?Number(actRow[ci]):0;
+            if(pv!==null&&pv>0){
+              // Convert year68→Q label format: "68-Q2" → display as "68Q2"
+              const [yr,q]=key.split('-');
+              labels.push(`${pid} ${yr}Q${q}`);
+              plans.push(pv);
+              actuals.push(isNaN(av)?0:av);
+            }
+          });
+        });
+
+        if(labels.length>0){
+          window._execLiveData={labels,plans,actuals};
+          rendered.exec=false;
+          updateFcRows(labels,plans,actuals);
+        }
+      }
+    }catch(e){
+      console.warn('finance_plan2 error:',e);
+      // fallback: finance_plan1 (wide format with Plan68-Q2/Actual68-Q2 headers)
+      try{
+        const planTable=await fetchGSheet('finance_plan1');
+        if(planTable&&planTable.rows&&planTable.rows.length>0){
+          const hdrs=planTable.cols.map(c=>(c.label||'').trim());
+          const hdrsL=hdrs.map(h=>h.toLowerCase().replace(/\s/g,''));
+          const qPairs=[];
+          // Match Plan68-Q1/Actual68-Q1 style
+          hdrsL.forEach((h,i)=>{
+            const m=h.match(/^plan(\d{2})-?q(\d)$/);
+            if(!m) return;
+            const aKey=`actual${m[1]}-q${m[2]}`;
+            const ai=hdrsL.findIndex(h2=>h2===aKey||h2===`actual${m[1]}q${m[2]}`);
+            if(ai>=0) qPairs.push({label:`${m[1]}Q${m[2]}`,iP:i,iA:ai});
+          });
+          if(qPairs.length>0){
+            const labels=[],plans=[],actuals=[];
+            planTable.rows.forEach(row=>{
+              const c=row.c;
+              const pid=(c[0]&&c[0].v)?c[0].v.toString().trim():'';
+              if(!pid||pid==='proj_ID') return;
+              qPairs.forEach(({label,iP,iA})=>{
+                const pv=c[iP]&&c[iP].v?Number(c[iP].v):null;
+                const av=c[iA]&&c[iA].v?Number(c[iA].v):0;
+                if(pv&&pv>0){labels.push(`${pid} ${label}`);plans.push(pv);actuals.push(av||0);}
+              });
+            });
+            if(labels.length>0){window._execLiveData={labels,plans,actuals};rendered.exec=false;}
+          }
+        }
+      }catch(e2){console.warn('finance_plan1 fallback error:',e2);}
+    }
+    //
+    // Layout A (wide/horizontal) — 1 row per project:
+    //   col0=รหัส | col1=ชื่อ | แผนQ1 | จริงQ1 | แผนQ2 | จริงQ2 ...
+    //   Header keywords: แผน/plan + Q/ไตรมาส number, จริง/actual + Q number
+    //
+    // Layout B (tall/vertical) — multiple rows per project:
+    //   col0=รหัส | col1=ไตรมาส(Q1/Q2..) | col2=แผน | col3=จริง
+    //   Header keywords: ไตรมาส/quarter/Q in col1; แผน/plan in col2; จริง/actual in col3
+    try{
+      const planTable=await fetchGSheet('finance_plan2');
+      if(planTable&&planTable.rows&&planTable.rows.length>0){
+        const hdrs=planTable.cols.map(c=>(c.label||'').trim());
+        const hdrsL=hdrs.map(h=>h.toLowerCase());
+        const labels=[],plans=[],actuals=[];
+
+        // ── detect Layout B (vertical): col1 header contains ไตรมาส/quarter/q
+        const col1=hdrsL[1]||'';
+        const isVertical=col1.includes('ไตรมาส')||col1.includes('quarter')||col1==='q'||col1.includes(' q');
+
+        if(isVertical){
+          // Layout B: each row = one project+quarter combination
+          // find col indices by keyword
+          const iId=hdrsL.findIndex(h=>h.includes('รหัส')||h.includes('id')||h.includes('โครงการ')||h===''&&hdrsL.indexOf('')===0);
+          const iQ =hdrsL.findIndex(h=>h.includes('ไตรมาส')||h.includes('quarter')||h==='q');
+          // แผน = plan column
+          const iP =hdrsL.findIndex((h,i)=>i>1&&(h.includes('แผน')||h.includes('plan')||h.includes('งบประมาณ')));
+          // จริง = actual column
+          const iA =hdrsL.findIndex((h,i)=>i>1&&(h.includes('จริง')||h.includes('actual')||h.includes('เบิก')));
+          if(iP>=0&&iA>=0){
+            planTable.rows.forEach(row=>{
+              const c=row.c;
+              const pid=gvizVal(c[iId>=0?iId:0]);
+              if(!pid) return;
+              const qRaw=gvizVal(c[iQ>=0?iQ:1]);
+              // extract quarter number: Q1→1, ไตรมาส2→2, 3→3
+              const qNum=qRaw?parseInt((qRaw.toString().match(/\d+/)||['0'])[0]):0;
+              if(!qNum) return;
+              const pv=c[iP]&&c[iP].v!==null&&c[iP].v!==''&&c[iP].v!=='-'?Number(c[iP].v):null;
+              const av=c[iA]&&c[iA].v!==null&&c[iA].v!==''&&c[iA].v!=='-'?Number(c[iA].v):null;
+              if(pv!==null&&pv>0){
+                labels.push(`${pid.toString().trim()} Q${qNum}`);
+                plans.push(pv);
+                actuals.push(av||0);
+              }
+            });
+          }
+        } else {
+          // Layout A: wide format — find plan/actual column pairs per quarter
+          const qPairs=[];
+          for(let q=1;q<=8;q++){
+            // Thai: แผนQ1, แผน Q1, แผนไตรมาส1  /  จริงQ1, จริง Q1
+            // EN:  planQ1, planq1, plan_q1, plan1
+            const planRe=new RegExp(`(แผน|plan)[_\\s]*(q|ไตรมาส)?[_\\s]*0?${q}$`,'i');
+            const actRe =new RegExp(`(จริง|actual|เบิก)[_\\s]*(q|ไตรมาส)?[_\\s]*0?${q}$`,'i');
+            const iP=hdrsL.findIndex(h=>planRe.test(h));
+            const iA=hdrsL.findIndex(h=>actRe.test(h));
+            if(iP>=0&&iA>=0) qPairs.push({q,iP,iA});
+          }
+          if(qPairs.length>0){
+            planTable.rows.forEach(row=>{
+              const c=row.c;
+              const pid=(c[0]&&c[0].v)?c[0].v.toString().trim():'';
+              if(!pid||pid===hdrs[0]) return; // skip header row if repeated
+              qPairs.forEach(({q,iP,iA})=>{
+                const pv=c[iP]&&c[iP].v!==null&&c[iP].v!==''&&c[iP].v!=='-'?Number(c[iP].v):null;
+                const av=c[iA]&&c[iA].v!==null&&c[iA].v!==''&&c[iA].v!=='-'?Number(c[iA].v):null;
+                if(pv!==null&&pv>0){
+                  labels.push(`${pid} Q${q}`);
+                  plans.push(pv);
+                  actuals.push(av||0);
+                }
+              });
+            });
+          }
+        }
+
+        if(labels.length>0){
+          window._execLiveData={labels,plans,actuals};
+          rendered.exec=false;
+          // also update fc-row bars dynamically
+          updateFcRows(labels,plans,actuals);
+        }
+      }
+    }catch(e){
+      console.warn('finance_plan2 sheet error:',e);
+      // fallback: try old finance_plan sheet
+      try{
+        const planTable=await fetchGSheet('finance_plan');
+        if(planTable&&planTable.rows&&planTable.rows.length>0){
+          const hdrs=planTable.cols.map(c=>(c.label||'').trim().toLowerCase());
+          const qPairs=[];
+          for(let q=1;q<=8;q++){
+            const iP=hdrs.findIndex(h=>h===`planq${q}`||h===`plan0${q}`||h===`plan${q}`);
+            const iA=hdrs.findIndex(h=>h===`actualq${q}`||h===`actual0${q}`||h===`actual${q}`);
+            if(iP>=0&&iA>=0) qPairs.push({q,iP,iA});
+          }
+          if(qPairs.length>0){
+            const labels=[],plans=[],actuals=[];
+            planTable.rows.forEach(row=>{
+              const c=row.c;
+              const pid=(c[0]&&c[0].v)?c[0].v.toString().trim():'';
+              if(!pid) return;
+              qPairs.forEach(({q,iP,iA})=>{
+                const pv=c[iP]&&c[iP].v&&c[iP].v!=='-'?Number(c[iP].v):null;
+                const av=c[iA]&&c[iA].v&&c[iA].v!=='-'?Number(c[iA].v):null;
+                if(pv!==null&&pv>0){labels.push(`${pid} Q${q}`);plans.push(pv||0);actuals.push(av||0);}
+              });
+            });
+            if(labels.length>0){window._execLiveData={labels,plans,actuals};rendered.exec=false;}
+          }
+        }
+      }catch(e2){/* both sheets unavailable */}
+    }
+    // ── Re-render ─────────────────────────────────────────────────────────────
+    renderStatus();
+    if(rendered.exec===false){const cv=document.getElementById('execChart'); if(cv) renderCharts('execution');}
+    showBanner('#d1fae5','#065f46','✅ ข้อมูลจาก Google Sheets โหลดแล้ว');
+    setTimeout(()=>{if(banner) banner.style.display='none';},3000);
+  }catch(err){
+    console.warn('Live data:',err);
+    showBanner('#fef3c7','#92400e','⚠️ ใช้ข้อมูลที่บันทึกไว้ (ไม่สามารถเชื่อม Sheets ได้)');
+    setTimeout(()=>{if(banner) banner.style.display='none';},4500);
+  }
+}
+
+window.addEventListener('load',()=>setTimeout(()=>{renderCharts('overview');renderStatus();loadLiveData();},120));
+</script>
+</body>
+</html>
